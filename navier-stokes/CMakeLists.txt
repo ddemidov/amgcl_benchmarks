@@ -15,7 +15,9 @@ if (CUDA_FOUND)
         COPYONLY
         )
 
-    cuda_add_executable(ns_amgcl_cuda ${CMAKE_CURRENT_BINARY_DIR}/ns_amgcl.cu)
+    cuda_add_executable(ns_amgcl_cuda
+        ${CMAKE_CURRENT_BINARY_DIR}/ns_amgcl.cu
+        OPTIONS -DSOLVER_BACKEND_CUDA)
 
     target_link_libraries(ns_amgcl_cuda
         amgcl::amgcl

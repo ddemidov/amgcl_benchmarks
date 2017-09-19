@@ -15,7 +15,9 @@ if (CUDA_FOUND)
         COPYONLY
         )
 
-    cuda_add_executable(poisson_amgcl_cuda ${CMAKE_CURRENT_BINARY_DIR}/poisson_amgcl.cu)
+    cuda_add_executable(poisson_amgcl_cuda
+        ${CMAKE_CURRENT_BINARY_DIR}/poisson_amgcl.cu
+        OPTIONS -DSOLVER_BACKEND_CUDA)
 
     target_include_directories(poisson_amgcl_cuda
         PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
