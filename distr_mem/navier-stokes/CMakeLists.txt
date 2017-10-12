@@ -1,25 +1,25 @@
-add_executable(ns_amgcl ns_amgcl.cpp)
-target_link_libraries(ns_amgcl
+add_executable(dmem_ns_amgcl amgcl.cpp)
+target_link_libraries(dmem_ns_amgcl
     amgcl::amgcl
     mpi_target
     program_options
     )
 
-add_executable(ns_trilinos ns_trilinos.cpp)
-target_link_libraries(ns_trilinos mpi_target trilinos_target amgcl::amgcl)
+add_executable(dmem_ns_trilinos trilinos.cpp)
+target_link_libraries(dmem_ns_trilinos mpi_target trilinos_target amgcl::amgcl)
 
 if (CUDA_FOUND)
     configure_file(
-        ${CMAKE_CURRENT_SOURCE_DIR}/ns_amgcl.cpp
-        ${CMAKE_CURRENT_BINARY_DIR}/ns_amgcl.cu
+        ${CMAKE_CURRENT_SOURCE_DIR}/amgcl.cpp
+        ${CMAKE_CURRENT_BINARY_DIR}/amgcl.cu
         COPYONLY
         )
 
-    cuda_add_executable(ns_amgcl_cuda
-        ${CMAKE_CURRENT_BINARY_DIR}/ns_amgcl.cu
+    cuda_add_executable(dmem_ns_amgcl_cuda
+        ${CMAKE_CURRENT_BINARY_DIR}/amgcl.cu
         OPTIONS -DSOLVER_BACKEND_CUDA)
 
-    target_link_libraries(ns_amgcl_cuda
+    target_link_libraries(dmem_ns_amgcl_cuda
         amgcl::amgcl
         mpi_target
         program_options

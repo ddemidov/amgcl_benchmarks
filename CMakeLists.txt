@@ -62,6 +62,19 @@ foreach(lib
     target_link_libraries(trilinos_target INTERFACE ${TRILINOS_${lib}_LIBRARY})
 endforeach()
 
+# --- PETSC ----------------------------------------------------------------
+add_library(petsc_target INTERFACE)
+target_compile_options(petsc_target INTERFACE ${OpenMP_CXX_FLAGS})
+target_include_directories(petsc_target INTERFACE
+    ${MPI_CXX_INCLUDE_PATH}
+    $ENV{PETSC_DIR}/include
+    )
+find_library(PETSC_LIBRARY petsc PATHS ENV PETSC_DIR PATH_SUFFIXES lib)
+target_link_libraries(petsc_target INTERFACE
+    ${MPI_CXX_LIBRARIES}
+    ${OpenMP_CXX_FLAGS}
+    ${PETSC_LIBRARY})
+
 # --------------------------------------------------------------------------
-add_subdirectory(poisson)
-add_subdirectory(navier-stokes)
+add_subdirectory(shared_mem)
+add_subdirectory(distr_mem)
