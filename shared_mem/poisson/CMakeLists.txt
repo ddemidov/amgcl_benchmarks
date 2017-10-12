@@ -21,10 +21,10 @@ endif()
 
 if (TARGET trilinos_target)
     add_executable(smem_poisson_trilinos trilinos.cpp)
-    target_link_libraries(smem_poisson_trilinos trilinos_target)
+    target_link_libraries(smem_poisson_trilinos trilinos_target mpi_target)
 endif()
 
 if (TARGET petsc_target)
     add_executable(smem_poisson_petsc petsc.cpp)
-    target_link_libraries(smem_poisson_petsc petsc_target)
+    target_link_libraries(smem_poisson_petsc petsc_target mpi_target)
 endif()

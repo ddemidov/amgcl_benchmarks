@@ -16,8 +16,9 @@ target_link_libraries(program_options INTERFACE ${Boost_PROGRAM_OPTIONS_LIBRARY}
 # --- MPI ------------------------------------------------------------------
 find_package(MPI)
 add_library(mpi_target INTERFACE)
+target_compile_options(mpi_target INTERFACE ${MPI_CXX_COMPILE_FLAGS})
 target_include_directories(mpi_target INTERFACE ${MPI_CXX_INCLUDE_PATH})
-target_link_libraries(mpi_target INTERFACE ${MPI_CXX_LIBRARIES})
+target_link_libraries(mpi_target INTERFACE ${MPI_CXX_LINK_FLAGS} ${MPI_CXX_LIBRARIES})
 
 # --- AMGCL ----------------------------------------------------------------
 find_package(amgcl)
@@ -64,16 +65,9 @@ endforeach()
 
 # --- PETSC ----------------------------------------------------------------
 add_library(petsc_target INTERFACE)
-target_compile_options(petsc_target INTERFACE ${OpenMP_CXX_FLAGS})
-target_include_directories(petsc_target INTERFACE
-    ${MPI_CXX_INCLUDE_PATH}
-    $ENV{PETSC_DIR}/include
-    )
+target_include_directories(petsc_target INTERFACE $ENV{PETSC_DIR}/include)
 find_library(PETSC_LIBRARY petsc PATHS ENV PETSC_DIR PATH_SUFFIXES lib)
-target_link_libraries(petsc_target INTERFACE
-    ${MPI_CXX_LIBRARIES}
-    ${OpenMP_CXX_FLAGS}
-    ${PETSC_LIBRARY})
+target_link_libraries(petsc_target INTERFACE ${PETSC_LIBRARY})
 
 # --------------------------------------------------------------------------
 add_subdirectory(shared_mem)
