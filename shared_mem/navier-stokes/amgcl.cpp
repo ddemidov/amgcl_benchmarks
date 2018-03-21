@@ -83,7 +83,7 @@ int main(int argc, char *argv[]) {
     int nb = rows / 4;
 
     prof.tic("setup");
-    Solver solve(adapter::block_matrix<4, value_type>(boost::tie(rows, ptr, col, val)), prm);
+    Solver solve(adapter::block_matrix<value_type>(boost::tie(rows, ptr, col, val)), prm);
     double tm_setup = prof.toc("setup");
 
     std::cout << solve << std::endl;
