@@ -21,17 +21,29 @@
 using namespace Teuchos;
 
 //---------------------------------------------------------------------------
-void assemble(int n, Epetra_CrsMatrix &A, Epetra_Vector &f, Epetra_Vector &x)
+void assemble(int n, Epetra_CrsMatrix &A, Epetra_Vector &f, Epetra_Vector &x,
+        std::vector<double> &x_coo, std::vector<double> &y_coo, std::vector<double> &z_coo
+        )
 {
     std::vector<int>    col; col.reserve(7);
     std::vector<double> val; val.reserve(7);
 
-    for(int row = 0; row < A.RowMap().NumMyElements(); ++row, col.clear(), val.clear()) {
+    const int n_loc = A.RowMap().NumMyElements();
+
+    x_coo.resize(n_loc);
+    y_coo.resize(n_loc);
+    z_coo.resize(n_loc);
+
+    for(int row = 0; row < n_loc; ++row, col.clear(), val.clear()) {
         int idx = A.RowMap().GID(row);
 
         int i = idx % n;
         int j = (idx / n) % n;
         int k = idx / (n * n);
+
+        x_coo[row] = i;
+        y_coo[row] = j;
+        z_coo[row] = k;
 
         if (k > 0) {
             col.push_back(idx - n * n);
@@ -91,9 +103,11 @@ int main(int argc, char *argv[])
 #endif
 
         int n = 150;
+        std::string repartitioner = "Zoltan";
 
         CommandLineProcessor CLP;
         CLP.setOption("n", &n, "problem size");
+        CLP.setOption("r", &repartitioner, "repartitioner (Zoltan/ParMETIS)");
         CLP.parse(argc, argv);
 
         Epetra_Time Time(Comm);
@@ -104,7 +118,9 @@ int main(int argc, char *argv[])
         Epetra_Vector f(Map), x(Map);
         Epetra_CrsMatrix A(Copy, Map, 7);
 
-        assemble(n, A, f, x);
+        std::vector<double> x_coo, y_coo, z_coo;
+
+        assemble(n, A, f, x, x_coo, y_coo, z_coo);
 
         Epetra_LinearProblem Problem(&A, &x, &f);
         double tm_assemble = Time.ElapsedTime();
@@ -119,6 +135,18 @@ int main(int argc, char *argv[])
         //  NSSA is appropriate for nonsymmetric problems such as convection-diffusion
         ML_Epetra::SetDefaults("SA",MLList);
         MLList.set("ML output", 10);
+
+        MLList.set("repartition: enable", 1);
+        MLList.set("repartition: max min ratio", 1.3);
+        MLList.set("repartition: min per proc", 500);
+        MLList.set("repartition: partitioner", repartitioner);
+
+        if (repartitioner == "Zoltan") {
+            MLList.set("repartition: Zoltan dimensions", 2);
+            MLList.set("x-coordinates", x_coo.data());
+            MLList.set("y-coordinates", y_coo.data());
+            MLList.set("z-coordinates", z_coo.data());
+        }
 
         // create the preconditioner object based on options in MLList and compute hierarchy
         ML_Epetra::MultiLevelPreconditioner MLPrec(A, MLList);
