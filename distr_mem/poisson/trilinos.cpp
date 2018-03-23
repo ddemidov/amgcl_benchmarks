@@ -103,11 +103,11 @@ int main(int argc, char *argv[])
 #endif
 
         int n = 150;
-        std::string repartitioner = "Zoltan";
+        std::string rebalance;
 
         CommandLineProcessor CLP;
         CLP.setOption("n", &n, "problem size");
-        CLP.setOption("r", &repartitioner, "repartitioner (Zoltan/ParMETIS)");
+        CLP.setOption("r", &rebalance, "rebalance (Zoltan/ParMETIS)");
         CLP.parse(argc, argv);
 
         Epetra_Time Time(Comm);
@@ -136,16 +136,18 @@ int main(int argc, char *argv[])
         ML_Epetra::SetDefaults("SA",MLList);
         MLList.set("ML output", 10);
 
-        MLList.set("repartition: enable", 1);
-        MLList.set("repartition: max min ratio", 1.3);
-        MLList.set("repartition: min per proc", 500);
-        MLList.set("repartition: partitioner", repartitioner);
+        if (!rebalance.empty()) {
+            MLList.set("repartition: enable", 1);
+            MLList.set("repartition: partitioner", rebalance);
+            MLList.set("repartition: max min ratio", 1.3);
+            MLList.set("repartition: min per proc", 500);
 
-        if (repartitioner == "Zoltan") {
-            MLList.set("repartition: Zoltan dimensions", 2);
-            MLList.set("x-coordinates", x_coo.data());
-            MLList.set("y-coordinates", y_coo.data());
-            MLList.set("z-coordinates", z_coo.data());
+            if (rebalance == "Zoltan") {
+                MLList.set("repartition: Zoltan dimensions", 3);
+                MLList.set("x-coordinates", x_coo.data());
+                MLList.set("y-coordinates", y_coo.data());
+                MLList.set("z-coordinates", z_coo.data());
+            }
         }
 
         // create the preconditioner object based on options in MLList and compute hierarchy
