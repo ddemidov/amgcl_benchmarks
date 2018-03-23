@@ -103,11 +103,13 @@ int main(int argc, char *argv[])
 #endif
 
         int n = 150;
+        int dd = 0;
         std::string rebalance;
 
         CommandLineProcessor CLP;
         CLP.setOption("n", &n, "problem size");
         CLP.setOption("r", &rebalance, "rebalance (Zoltan/ParMETIS)");
+        CLP.setOption("dd", &dd, "Use DD-ML");
         CLP.parse(argc, argv);
 
         Epetra_Time Time(Comm);
@@ -133,7 +135,11 @@ int main(int argc, char *argv[])
         //set multigrid defaults based on problem type
         //  SA is appropriate for Laplace-like systems
         //  NSSA is appropriate for nonsymmetric problems such as convection-diffusion
-        ML_Epetra::SetDefaults("SA",MLList);
+        if (dd) {
+            ML_Epetra::SetDefaults("DD-ML",MLList);
+        } else {
+            ML_Epetra::SetDefaults("SA",MLList);
+        }
         MLList.set("ML output", 10);
 
         if (!rebalance.empty()) {
@@ -170,7 +176,7 @@ int main(int argc, char *argv[])
             std::cout << "setup:    " << tm_setup    << std::endl;
             std::cout << "solve:    " << tm_solve    << std::endl;
 
-            std::ofstream f("trilinos.txt", std::ios::app);
+            std::ofstream f(dd ? "trilinos_dd.txt" : "trilinos.txt", std::ios::app);
             f << Comm.NumProc() << " " << n << " " << Solver.NumIters() << " "
               << std::scientific << tm_setup << " " << tm_solve << std::endl;
         }
