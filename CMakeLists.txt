@@ -18,7 +18,9 @@ find_package(MPI)
 add_library(mpi_target INTERFACE)
 target_compile_options(mpi_target INTERFACE ${MPI_CXX_COMPILE_FLAGS})
 target_include_directories(mpi_target INTERFACE ${MPI_CXX_INCLUDE_PATH})
-target_link_libraries(mpi_target INTERFACE ${MPI_CXX_LINK_FLAGS} ${MPI_CXX_LIBRARIES})
+string(STRIP "${MPI_CXX_LINK_FLAGS}" MPI_CXX_LINK_FLAGS)
+string(STRIP "${MPI_CXX_LIBRARIES}" MPI_CXX_LIBRARIES)
+target_link_libraries(mpi_target INTERFACE "${MPI_CXX_LINK_FLAGS} ${MPI_CXX_LIBRARIES}")
 
 # --- AMGCL ----------------------------------------------------------------
 find_package(amgcl)
