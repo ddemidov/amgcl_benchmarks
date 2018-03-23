@@ -185,12 +185,14 @@ int main(int argc, char *argv[]) {
         std::string f_file = "b.bin";
         std::string p_file = "part-" + std::to_string(Comm.NumProc()) + ".mtx";
         double tol = 1e-4;
+        int rebalance = 0;
 
         CommandLineProcessor CLP;
         CLP.setOption("matrix", &A_file, "matrix file name");
         CLP.setOption("RHS", &f_file, "RHS file name");
         CLP.setOption("part", &p_file, "part file name");
         CLP.setOption("tol", &tol, "tolerance");
+        CLP.setOption("r", &rebalance, "rebalance");
         CLP.parse(argc, argv);
 
         Epetra_Time Time(Comm);
@@ -219,6 +221,13 @@ int main(int argc, char *argv[]) {
         MLList.set("max levels", 3);
         MLList.set("PDE equations", 4);
         MLList.set("aggregation: type", "Uncoupled");
+
+        if (rebalance) {
+            MLList.set("repartition: enable", 1);
+            MLList.set("repartition: partitioner", "ParMETIS");
+            MLList.set("repartition: max min ratio", 1.3);
+            MLList.set("repartition: min per proc", 500);
+        }
 
         // create the preconditioner object based on options in MLList and compute hierarchy
         ML_Epetra::MultiLevelPreconditioner MLPrec(*A, MLList);
