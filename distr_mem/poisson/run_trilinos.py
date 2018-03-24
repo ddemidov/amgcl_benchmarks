@@ -35,7 +35,7 @@ f"""#!/bin/bash
 
 export OMP_NUM_THREADS=1
 
-srun ./dmem_poisson_trilinos {params}
+srun ./dmem_poisson_trilinos --echo-command-line {params}
 """)
 
 subprocess.Popen(['sbatch', script_name]).wait()
