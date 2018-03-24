@@ -10,7 +10,7 @@ parser.add_argument('--rebalance', dest='rebalance')
 parser.add_argument('--dd_ml', dest='dd_ml', action='store_true', default=False)
 args = parser.parse_args(sys.argv[1:])
 
-script_name = f'trilinos_{args.np}_{args.dpp}'
+script_name = f'scripts/trilinos_{args.np}_{args.dpp}'
 params      = f'--n={int(0.5 + (args.dpp * args.np)**(1/3))}'
 
 if args.rebalance:
