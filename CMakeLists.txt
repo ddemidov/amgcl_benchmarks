@@ -27,7 +27,7 @@ find_package(amgcl)
 get_property(AMGCL_INCLUDE_DIRS TARGET amgcl::amgcl PROPERTY INTERFACE_INCLUDE_DIRECTORIES)
 
 # --- CUDA -----------------------------------------------------------------
-find_package(CUDA)
+find_package(CUDA QUIET)
 if (CUDA_FOUND)
     set(CUDA_TARGET_ARCH "Kepler Maxwell Pascal" CACHE STRING "Target architecture(s) for CUDA")
     cuda_select_nvcc_arch_flags(CUDA_ARCH_FLAGS ${CUDA_TARGET_ARCH})

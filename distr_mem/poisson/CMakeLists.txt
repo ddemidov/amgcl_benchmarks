@@ -1,3 +1,11 @@
+foreach(script run_trilinos.py)
+    configure_file(
+        ${CMAKE_CURRENT_SOURCE_DIR}/${script}
+        ${CMAKE_CURRENT_BINARY_DIR}/${script}
+        COPYONLY
+        )
+endforeach()
+
 add_executable(dmem_poisson_amgcl amgcl.cpp)
 target_link_libraries(dmem_poisson_amgcl
     amgcl::amgcl
