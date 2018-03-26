@@ -1,4 +1,4 @@
-foreach(script run_trilinos.py)
+foreach(script run_trilinos.py run_petsc.py)
     configure_file(
         ${CMAKE_CURRENT_SOURCE_DIR}/${script}
         ${CMAKE_CURRENT_BINARY_DIR}/${script}
