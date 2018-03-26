@@ -61,7 +61,7 @@ void assemble(PetscInt n, Mat &A, Vec &f, Vec &x) {
     VecSet(x, 0.0);
 
     MatCreate(MPI_COMM_WORLD, &A);
-    MatSetSizes(A, chunk, PETSC_DECIDE, n3, n3);
+    MatSetSizes(A, chunk, chunk, n3, n3);
     MatSetFromOptions(A);
     MatMPIAIJSetPreallocation(A, 7, 0, 7, 0);
     MatSeqAIJSetPreallocation(A, 7, 0);
