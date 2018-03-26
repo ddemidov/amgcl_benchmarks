@@ -13,6 +13,12 @@ target_link_libraries(dmem_poisson_amgcl
     program_options
     )
 
+add_executable(dmem_poisson_petsc petsc.cpp)
+target_link_libraries(dmem_poisson_petsc
+    mpi_target
+    petsc_target
+    )
+
 add_executable(dmem_poisson_trilinos trilinos.cpp)
 target_link_libraries(dmem_poisson_trilinos mpi_target trilinos_target)
 
