@@ -12,11 +12,12 @@ parser.add_argument('--const', dest='const', action='store_true', default=False)
 args = parser.parse_args(sys.argv[1:])
 
 script_name = f'scripts/amgcl_{args.np}x{args.omp}_{args.dpp}'
+params = f'-p solver.maxiter=500 -p precond.coarse_enough=500'
 
 if args.strong:
-    params = f'-n {args.dpp} -p solver.maxiter=500 -p precond.coarse_enough=500'
+    params += f' -n {args.dpp}'
 else:
-    params = f'-n {int(0.5 + (args.np * args.omp * args.dpp)**(1/3))}'
+    params += f' -n {int(0.5 + (args.np * args.omp * args.dpp)**(1/3))}'
 
 if args.const:
     script_name += '_const'
