@@ -18,70 +18,102 @@
 #include <Teuchos_CommandLineProcessor.hpp>
 #include <ml_epetra_preconditioner.h>
 
-using namespace Teuchos;
+#include "domain_partition.hpp"
 
 //---------------------------------------------------------------------------
-void assemble(int n, Epetra_CrsMatrix &A, Epetra_Vector &f, Epetra_Vector &x,
+struct renumbering {
+    const domain_partition<3> &part;
+    const std::vector<ptrdiff_t> &dom;
+
+    renumbering(
+            const domain_partition<3> &p,
+            const std::vector<ptrdiff_t> &d
+            ) : part(p), dom(d)
+    {}
+
+    ptrdiff_t operator()(ptrdiff_t i, ptrdiff_t j, ptrdiff_t k) const {
+        boost::array<ptrdiff_t, 3> p = {{i, j, k}};
+        std::pair<int,ptrdiff_t> v = part.index(p);
+        return dom[v.first] + v.second;
+    }
+};
+
+//---------------------------------------------------------------------------
+void assemble(const Epetra_Comm &comm, const domain_partition<3> &part,
+        int n, Epetra_CrsMatrix &A, Epetra_Vector &f, Epetra_Vector &x,
         std::vector<double> &x_coo, std::vector<double> &y_coo, std::vector<double> &z_coo
         )
 {
     std::vector<int>    col; col.reserve(7);
     std::vector<double> val; val.reserve(7);
 
-    const int n_loc = A.RowMap().NumMyElements();
+    ptrdiff_t n_loc = part.size(comm.MyPID());
+    std::cout << n_loc << " = " << A.RowMap().NumMyElements() << std::endl;
+
+    std::vector<ptrdiff_t> domain(comm.NumProc() + 1, 0);
+    comm.GatherAll(&n_loc, domain.data() + 1, 1);
+    std::partial_sum(domain.begin(), domain.end(), domain.begin());
+
+    renumbering renum(part, domain);
 
     x_coo.resize(n_loc);
     y_coo.resize(n_loc);
     z_coo.resize(n_loc);
 
-    for(int row = 0; row < n_loc; ++row, col.clear(), val.clear()) {
-        int idx = A.RowMap().GID(row);
+    boost::array<ptrdiff_t, 3> lo = part.domain(comm.MyPID()).min_corner();
+    boost::array<ptrdiff_t, 3> hi = part.domain(comm.MyPID()).max_corner();
 
-        int i = idx % n;
-        int j = (idx / n) % n;
-        int k = idx / (n * n);
+    for(int k = lo[2], idx = 0; k <= hi[2]; ++k) {
+        for(int j = lo[1]; j <= hi[1]; ++j) {
+            for(int i = lo[0]; i <= hi[0]; ++i, ++idx) {
+                col.clear();
+                val.clear();
 
-        x_coo[row] = i;
-        y_coo[row] = j;
-        z_coo[row] = k;
+                x_coo[idx] = i;
+                y_coo[idx] = j;
+                z_coo[idx] = k;
 
-        if (k > 0) {
-            col.push_back(idx - n * n);
-            val.push_back(-1.0/6.0);
+                f[idx] = 1.0;
+                x[idx] = 0.0;
+
+                int row = renum(i,j,k);
+
+                if (k > 0)  {
+                    col.push_back(renum(i,j,k-1));
+                    val.push_back(-1.0/6.0);
+                }
+
+                if (j > 0)  {
+                    col.push_back(renum(i,j-1,k));
+                    val.push_back(-1.0/6.0);
+                }
+
+                if (i > 0) {
+                    col.push_back(renum(i-1,j,k));
+                    val.push_back(-1.0/6.0);
+                }
+
+                col.push_back(renum(i,j,k));
+                val.push_back(1.0);
+
+                if (i + 1 < n) {
+                    col.push_back(renum(i+1,j,k));
+                    val.push_back(-1.0/6.0);
+                }
+
+                if (j + 1 < n) {
+                    col.push_back(renum(i,j+1,k));
+                    val.push_back(-1.0/6.0);
+                }
+
+                if (k + 1 < n) {
+                    col.push_back(renum(i,j,k+1));
+                    val.push_back(-1.0/6.0);
+                }
+
+                A.InsertGlobalValues(row, col.size(), val.data(), col.data());
+            }
         }
-
-        if (j > 0) {
-            col.push_back(idx - n);
-            val.push_back(-1.0/6.0);
-        }
-
-        if (i > 0) {
-            col.push_back(idx - 1);
-            val.push_back(-1.0/6.0);
-        }
-
-        col.push_back(idx);
-        val.push_back(1.0);
-
-        if (i + 1 < n) {
-            col.push_back(idx + 1);
-            val.push_back(-1.0/6.0);
-        }
-
-        if (j + 1 < n) {
-            col.push_back(idx + n);
-            val.push_back(-1.0/6.0);
-        }
-
-        if (k + 1 < n) {
-            col.push_back(idx + n * n);
-            val.push_back(-1.0/6.0);
-        }
-
-        f[row] = 1.0;
-        x[row] = 0.0;
-
-        A.InsertGlobalValues(idx, col.size(), val.data(), col.data());
     }
 
     A.FillComplete();
@@ -106,23 +138,30 @@ int main(int argc, char *argv[])
         int dd = 0;
         std::string rebalance;
 
-        CommandLineProcessor CLP;
+        Teuchos::CommandLineProcessor CLP;
         CLP.setOption("n", &n, "problem size");
         CLP.setOption("r", &rebalance, "rebalance (Zoltan/ParMETIS)");
         CLP.setOption("dd", &dd, "Use DD-ML");
         CLP.parse(argc, argv);
 
+        // Partitioning
+        boost::array<ptrdiff_t, 3> lo = { {0,   0,   0  } };
+        boost::array<ptrdiff_t, 3> hi = { {n-1, n-1, n-1} };
+
+        domain_partition<3> part(lo, hi, Comm.NumProc());
+        ptrdiff_t chunk = part.size( Comm.MyPID() );
+
         Epetra_Time Time(Comm);
 
         // Assemble problem
         Time.ResetStartTime();
-        Epetra_Map Map(n * n * n, 0, Comm);
+        Epetra_Map Map(n * n * n, chunk, 0, Comm);
         Epetra_Vector f(Map), x(Map);
         Epetra_CrsMatrix A(Copy, Map, 7);
 
         std::vector<double> x_coo, y_coo, z_coo;
 
-        assemble(n, A, f, x, x_coo, y_coo, z_coo);
+        assemble(Comm, part, n, A, f, x, x_coo, y_coo, z_coo);
 
         Epetra_LinearProblem Problem(&A, &x, &f);
         double tm_assemble = Time.ElapsedTime();
