@@ -48,7 +48,6 @@ void assemble(const Epetra_Comm &comm, const domain_partition<3> &part,
     std::vector<double> val; val.reserve(7);
 
     ptrdiff_t n_loc = part.size(comm.MyPID());
-    std::cout << n_loc << " = " << A.RowMap().NumMyElements() << std::endl;
 
     std::vector<ptrdiff_t> domain(comm.NumProc() + 1, 0);
     comm.GatherAll(&n_loc, domain.data() + 1, 1);
