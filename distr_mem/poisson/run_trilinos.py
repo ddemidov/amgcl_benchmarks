@@ -7,7 +7,7 @@ parser = argparse.ArgumentParser(sys.argv[0])
 parser.add_argument('--np',  dest='np', required=True, type=int)
 parser.add_argument('--dpp', dest='dpp', default=100**3, type=int)
 parser.add_argument('--rebalance', dest='rebalance')
-parser.add_argument('--dd_ml', dest='dd_ml', action='store_true', default=False)
+parser.add_argument('--dd_ml', dest='dd_ml', default=0, type=int)
 args = parser.parse_args(sys.argv[1:])
 
 script_name = f'scripts/trilinos_{args.np}_{args.dpp}'
@@ -17,9 +17,9 @@ if args.rebalance:
     script_name += f'_{args.rebalance.lower()}'
     params      += f' --r={args.rebalance}'
 
+params += ' --dd={args.dd_ml}'
 if args.dd_ml:
-    script_name += '_ddml'
-    params      += ' --dd=1'
+    script_name += '_dd' if args.dd_ml == 1 else '_ddml'
 
 script_name += '.sbatch'
 
