@@ -141,7 +141,7 @@ int main(int argc, char *argv[])
         Teuchos::CommandLineProcessor CLP;
         CLP.setOption("n", &n, "problem size");
         CLP.setOption("r", &rebalance, "rebalance (Zoltan/ParMETIS)");
-        CLP.setOption("dd", &dd, "Use DD-ML");
+        CLP.setOption("dd", &dd, "Use DD/DD-ML");
         CLP.parse(argc, argv);
 
         // Partitioning
@@ -174,7 +174,9 @@ int main(int argc, char *argv[])
         //set multigrid defaults based on problem type
         //  SA is appropriate for Laplace-like systems
         //  NSSA is appropriate for nonsymmetric problems such as convection-diffusion
-        if (dd) {
+        if (dd == 1) {
+            ML_Epetra::SetDefaults("DD",MLList);
+        } else if (dd == 2) {
             ML_Epetra::SetDefaults("DD-ML",MLList);
         } else {
             ML_Epetra::SetDefaults("SA",MLList);
@@ -206,7 +208,7 @@ int main(int argc, char *argv[])
         double tm_setup = Time.ElapsedTime();
 
         Time.ResetStartTime();
-        Solver.Iterate(100, 1e-8);
+        Solver.Iterate(500, 1e-8);
         double tm_solve = Time.ElapsedTime();
 
         // print out some information about the preconditioner
@@ -215,7 +217,15 @@ int main(int argc, char *argv[])
             std::cout << "setup:    " << tm_setup    << std::endl;
             std::cout << "solve:    " << tm_solve    << std::endl;
 
-            std::ofstream f(dd ? "trilinos_dd.txt" : "trilinos.txt", std::ios::app);
+            std::ostringstream fname;
+            fname << "trilinos";
+            if (dd == 1)
+                fname << "_dd";
+            else if (dd == 2)
+                fname << "_ddml";
+            fname << ".txt";
+
+            std::ofstream f(fname.str(), std::ios::app);
             f << Comm.NumProc() << " " << n << " " << Solver.NumIters() << " "
               << std::scientific << tm_setup << " " << tm_solve << std::endl;
         }
