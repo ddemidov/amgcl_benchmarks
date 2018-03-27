@@ -22,7 +22,7 @@ if args.rebalance:
     script_name += f'_{args.rebalance.lower()}'
     params      += f' --r={args.rebalance}'
 
-params += ' --dd={args.dd_ml}'
+params += f' --dd={args.dd_ml}'
 if args.dd_ml:
     script_name += '_dd' if args.dd_ml == 1 else '_ddml'
 
