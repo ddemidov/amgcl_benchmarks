@@ -14,6 +14,9 @@
 
 #include "log_times.hpp"
 
+namespace amgcl { profiler<backend::cuda_clock> prof; }
+using amgcl::prof;
+
 //---------------------------------------------------------------------------
 void assemble(
         int n,
@@ -123,8 +126,6 @@ int main(int argc, char *argv[]) {
 
     std::vector<int> ptr, col;
     std::vector<double> val;
-
-    profiler<backend::cuda_clock> prof;
 
     prof.tic("assemble");
     assemble(n, ptr, col, val);

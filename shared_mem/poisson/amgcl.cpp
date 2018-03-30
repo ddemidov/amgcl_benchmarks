@@ -17,6 +17,9 @@
 #endif
 #include "log_times.hpp"
 
+namespace amgcl { profiler<> prof; }
+using amgcl::prof;
+
 //---------------------------------------------------------------------------
 void assemble(
         int n,
@@ -126,8 +129,6 @@ int main(int argc, char *argv[]) {
 
 #pragma omp parallel for
     for(int i = 0; i < n3; ++i) f[i] = 1.0;
-
-    profiler<> prof;
 
     prof.tic("assemble");
     assemble(n, ptr, col, val);

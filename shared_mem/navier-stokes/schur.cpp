@@ -22,6 +22,9 @@
 #endif
 #include "log_times.hpp"
 
+namespace amgcl { profiler<> prof; }
+using amgcl::prof;
+
 //---------------------------------------------------------------------------
 int main(int argc, char *argv[]) {
     using namespace amgcl;
@@ -68,8 +71,6 @@ int main(int argc, char *argv[]) {
     size_t rows, n, m;
     std::vector<ptrdiff_t> ptr, col;
     std::vector<double> val, rhs;
-
-    profiler<> prof;
 
     prof.tic("reading");
     io::read_crs(vm["matrix"].as<std::string>(), rows, ptr, col, val);

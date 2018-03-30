@@ -19,6 +19,8 @@
 
 #include "log_times.hpp"
 
+namespace amgcl { profiler<> prof; }
+
 //---------------------------------------------------------------------------
 int main(int argc, char *argv[]) {
     using namespace amgcl;

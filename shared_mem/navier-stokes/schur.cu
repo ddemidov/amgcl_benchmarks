@@ -18,6 +18,9 @@
 #include <amgcl/profiler.hpp>
 
 #include "log_times.hpp"
+    
+namespace amgcl { profiler<amgcl::backend::cuda_clock> prof; }
+using amgcl::prof;
 
 //---------------------------------------------------------------------------
 int main(int argc, char *argv[]) {
@@ -65,8 +68,6 @@ int main(int argc, char *argv[]) {
     size_t rows, n, m;
     std::vector<ptrdiff_t> ptr, col;
     std::vector<double> val, rhs;
-
-    profiler<amgcl::backend::cuda_clock> prof;
 
     prof.tic("reading");
     io::read_crs(vm["matrix"].as<std::string>(), rows, ptr, col, val);
