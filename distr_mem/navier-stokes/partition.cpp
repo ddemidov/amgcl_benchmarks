@@ -258,7 +258,14 @@ int main(int argc, char *argv[]) {
         bool binary = vm["binary"].as<bool>();
 
         if (binary) {
-            amgcl::io::read_crs(ifile, rows, ptr, col, val);
+            std::vector<ptrdiff_t> lptr, lcol;
+            amgcl::io::read_crs(ifile, rows, lptr, lcol, val);
+
+            ptr.resize(lptr.size());
+            col.resize(lcol.size());
+
+            std::copy(lptr.begin(), lptr.end(), ptr.begin());
+            std::copy(lcol.begin(), lcol.end(), col.begin());
         } else {
             size_t cols;
             boost::tie(rows, cols) = amgcl::io::mm_reader(ifile)(ptr, col, val);
@@ -267,15 +274,7 @@ int main(int argc, char *argv[]) {
 
         std::vector<int> part = partition(rows, nparts, block_size, ptr, col);
 
-        if (binary) {
-            std::ofstream p(ofile.c_str(), std::ios::binary);
-
-            amgcl::io::write(p, rows);
-            amgcl::io::write(p, size_t(1));
-            amgcl::io::write(p, part);
-        } else {
-            amgcl::io::mm_write(ofile, &part[0], part.size());
-        }
+        amgcl::io::mm_write(ofile, &part[0], part.size());
     } catch (const std::exception &e) {
         std::cerr << "Error: " << e.what() << std::endl;
         return 1;
