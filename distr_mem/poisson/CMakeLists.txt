@@ -13,6 +13,10 @@ target_link_libraries(dmem_poisson_amgcl
     program_options
     )
 
+if (TARGET eigen_target)
+    target_link_libraries(dmem_poisson_amgcl eigen_target)
+endif()
+
 add_executable(dmem_poisson_petsc petsc.cpp)
 target_link_libraries(dmem_poisson_petsc
     mpi_target

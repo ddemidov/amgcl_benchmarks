@@ -5,6 +5,10 @@ target_link_libraries(dmem_ns_amgcl
     program_options
     )
 
+if (TARGET eigen_target)
+    target_link_libraries(dmem_ns_amgcl eigen_target)
+endif()
+
 add_executable(dmem_ns_trilinos trilinos.cpp)
 target_link_libraries(dmem_ns_trilinos mpi_target trilinos_target amgcl::amgcl)
 

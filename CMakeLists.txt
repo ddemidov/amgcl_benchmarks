@@ -28,6 +28,20 @@ target_link_libraries(mpi_target INTERFACE "${MPI_CXX_LINK_FLAGS} ${MPI_CXX_LIBR
 find_package(amgcl)
 get_property(AMGCL_INCLUDE_DIRS TARGET amgcl::amgcl PROPERTY INTERFACE_INCLUDE_DIRECTORIES)
 
+#----------------------------------------------------------------------------
+# Eigen backend
+#----------------------------------------------------------------------------
+find_path(EIGEN_INCLUDE Eigen/SparseCore PATH_SUFFIXES eigen3)
+if (EIGEN_INCLUDE)
+    add_library(eigen_target INTERFACE)
+    target_include_directories(eigen_target INTERFACE ${EIGEN_INCLUDE})
+    target_compile_options(eigen_target INTERFACE
+        $<$<CXX_COMPILER_ID:GNU>:-Wno-int-in-bool-context>
+        $<$<CXX_COMPILER_ID:Clang>:-Wno-c++11-long-long>
+        )
+    target_compile_definitions(eigen_target INTERFACE AMGCL_HAVE_EIGEN)
+endif()
+
 # --- CUDA -----------------------------------------------------------------
 find_package(CUDA QUIET)
 if (CUDA_FOUND)
