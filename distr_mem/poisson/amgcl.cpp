@@ -369,7 +369,10 @@ int main(int argc, char *argv[]) {
         int nt = 1;
 #endif
         std::ostringstream log_name;
-        log_name << "log3d_" << n3 << "_" << nt << "_" << world.size << ".txt";
+        log_name << "amgcl";
+        if (constant_deflation) log_name << "_const";
+        log_name << ".txt";
+
         std::ofstream log(log_name.str().c_str(), std::ios::app);
         log << n3 << "\t" << nt << "\t" << world.size
             << "\t" << tm_setup << "\t" << tm_solve
