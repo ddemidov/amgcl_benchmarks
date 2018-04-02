@@ -13,6 +13,10 @@ target_link_libraries(dmem_poisson_amgcl
     program_options
     )
 
+if (TARGET pastix_target)
+    target_link_libraries(dmem_poisson_amgcl pastix_target)
+endif()
+
 if (TARGET eigen_target)
     target_link_libraries(dmem_poisson_amgcl eigen_target)
 endif()

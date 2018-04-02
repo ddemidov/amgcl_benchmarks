@@ -2,6 +2,7 @@ cmake_minimum_required(VERSION 3.0)
 project(amgcl-deflation-code)
 set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
 
 # --- OpenMP ---------------------------------------------------------------
 find_package(OpenMP)
@@ -40,6 +41,27 @@ if (EIGEN_INCLUDE)
         $<$<CXX_COMPILER_ID:Clang>:-Wno-c++11-long-long>
         )
     target_compile_definitions(eigen_target INTERFACE AMGCL_HAVE_EIGEN)
+endif()
+
+#----------------------------------------------------------------------------
+# Find Pastix
+#----------------------------------------------------------------------------
+find_package(Scotch QUIET)
+find_package(Pastix QUIET)
+find_package(BLAS   QUIET)
+
+if (PASTIX_INCLUDES AND SCOTCH_INCLUDES AND BLAS_FOUND)
+    add_library(pastix_target INTERFACE)
+    target_include_directories(pastix_target INTERFACE
+        ${PASTIX_INCLUDES}
+        ${SCOTCH_INCLUDES}
+        )
+    target_link_libraries(pastix_target INTERFACE
+        ${PASTIX_LIBRARIES}
+        ${SCOTCH_LIBRARIES}
+        ${BLAS_LIBRARIES}
+        )
+    target_compile_definitions(pastix_target INTERFACE AMGCL_HAVE_PASTIX)
 endif()
 
 # --- CUDA -----------------------------------------------------------------
