@@ -1,4 +1,8 @@
-foreach(script run_trilinos.py run_petsc.py run_amgcl.py)
+foreach(script
+        run_trilinos.py run_petsc.py run_amgcl.py
+        run_amgcl_strong.sh run_amgcl_weak.sh
+        run_trilinos_strong.sh run_trilinos_weak.sh
+        )
     configure_file(
         ${CMAKE_CURRENT_SOURCE_DIR}/${script}
         ${CMAKE_CURRENT_BINARY_DIR}/${script}
