@@ -12,7 +12,7 @@ parser.add_argument('--const', dest='const', action='store_true', default=False)
 args = parser.parse_args(sys.argv[1:])
 
 script_name = f'scripts/amgcl_{args.np}x{args.omp}_{args.dpp}'
-params = f'-p isolver.maxiter=500 -p local.coarse_enough=500'
+params = f'-p isolver.maxiter=500 local.coarse_enough=500 local.coarsening.aggr.eps_strong=0.0 -i cg -d pastix'
 
 if args.strong:
     params += f' -n {args.dpp}'
