@@ -264,9 +264,7 @@ int main(int argc, char *argv[]) {
 #else
         int nt = 1;
 #endif
-        std::ostringstream log_name;
-        log_name << "schur_" << domain.back() << "_" << nt << "_" << world.size << ".txt";
-        std::ofstream log(log_name.str().c_str(), std::ios::app);
+        std::ofstream log("amgcl_spc.txt", std::ios::app);
         log << domain.back() << "\t" << nt << "\t" << world.size
             << "\t" << tm_setup << "\t" << tm_solve
             << "\t" << iters << "\t" << std::endl;
