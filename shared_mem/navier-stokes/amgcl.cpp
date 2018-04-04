@@ -1,7 +1,6 @@
 #include <iostream>
 #include <vector>
 
-#include <boost/program_options.hpp>
 #include <boost/property_tree/ptree.hpp>
 
 #include <amgcl/value_type/static_matrix.hpp>
@@ -20,6 +19,7 @@
 #  include <omp.h>
 #endif
 #include "log_times.hpp"
+#include "argh.h"
 
 namespace amgcl { profiler<> prof; }
 using amgcl::prof;
@@ -27,7 +27,6 @@ using amgcl::prof;
 //---------------------------------------------------------------------------
 int main(int argc, char *argv[]) {
     using namespace amgcl;
-    namespace po = boost::program_options;
 
     typedef static_matrix<double, 4, 4> value_type;
     typedef static_matrix<double, 4, 1> rhs_type;
@@ -37,46 +36,20 @@ int main(int argc, char *argv[]) {
         solver::lgmres<Backend>
         > Solver;
 
-    po::options_description desc("Options");
-
-    desc.add_options()
-        ("help,h", "Show this help.")
-        ("matrix,A",
-         po::value<std::string>()->default_value("A.bin"),
-         "System matrix in binary format."
-        )
-        (
-         "rhs,f",
-         po::value<std::string>()->default_value("b.bin"),
-         "The RHS vector in binary format."
-        )
-        (
-         "tol,e",
-         po::value<double>()->default_value(1e-4),
-         "Tolerance"
-        )
-        ;
-
-    po::variables_map vm;
-    po::store(po::parse_command_line(argc, argv, desc), vm);
-    po::notify(vm);
-
-    if (vm.count("help")) {
-        std::cout << desc << std::endl;
-        return 0;
-    }
+    argh::parser cmdl(argc, argv);
 
     Solver::params prm;
     prm.solver.maxiter = 500;
-    prm.solver.tol = vm["tol"].as<double>();
+
+    cmdl({"e", "tol"}, "1e-4") >> prm.solver.tol;
 
     size_t rows, n, m;
     std::vector<ptrdiff_t> ptr, col;
     std::vector<double> val, f;
 
     prof.tic("read");
-    io::read_crs(vm["matrix"].as<std::string>(), rows, ptr, col, val);
-    io::read_dense(vm["rhs"].as<std::string>(), n, m, f);
+    io::read_crs(cmdl({"A", "matrix"}, "A.bin").str(), rows, ptr, col, val);
+    io::read_dense(cmdl({"f", "rhs"}, "b.bin").str(), n, m, f);
     prof.toc("read");
 
     assert(n == rows && m == 1);

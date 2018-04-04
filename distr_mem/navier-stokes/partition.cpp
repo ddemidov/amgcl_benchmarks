@@ -5,11 +5,11 @@
 #include <numeric>
 #include <cassert>
 
-#include <boost/program_options.hpp>
-
 #include <amgcl/util.hpp>
 #include <amgcl/io/mm.hpp>
 #include <amgcl/io/binary.hpp>
+
+#include "argh.h"
 
 extern "C" {
 #include <metis.h>
@@ -215,47 +215,19 @@ std::vector<int> partition(
 
 //---------------------------------------------------------------------------
 int main(int argc, char *argv[]) {
-    namespace po = boost::program_options;
-
+    argh::parser cmdl(argc, argv);
     try {
-        std::string ifile;
-        std::string ofile = "partition.mtx";
+        std::string ifile  = cmdl({"i", "input"}).str();
+        std::string ofile  = cmdl({"o", "output"}).str();
+        bool        binary = cmdl[{"B", "binary"}];
 
         int nparts, block_size;
-
-        po::options_description desc("Options");
-
-        desc.add_options()
-            ("help,h", "show help")
-            ("input,i",      po::value<std::string>(&ifile)->required(), "Input matrix")
-            ("output,o",     po::value<std::string>(&ofile)->default_value(ofile), "Output file")
-            (
-             "binary,B",
-             po::bool_switch()->default_value(false),
-             "When specified, treat input files as binary instead of as MatrixMarket. "
-            )
-            ("nparts,n",     po::value<int>(&nparts)->required(), "Number of parts")
-            ("block_size,b", po::value<int>(&block_size)->default_value(1), "Block size")
-            ;
-
-        po::positional_options_description pd;
-        pd.add("input", 1);
-
-        po::variables_map vm;
-        po::store(po::command_line_parser(argc, argv).options(desc).positional(pd).run(), vm);
-
-        if (vm.count("help")) {
-            std::cout << desc << std::endl;
-            return 0;
-        }
-
-        po::notify(vm);
+        cmdl({"n", "nparts"}) >> nparts;
+        cmdl({"b", "block_size"}, "1") >> block_size;
 
         size_t rows;
         std::vector<int> ptr, col;
         std::vector<double> val;
-
-        bool binary = vm["binary"].as<bool>();
 
         if (binary) {
             std::vector<ptrdiff_t> lptr, lcol;

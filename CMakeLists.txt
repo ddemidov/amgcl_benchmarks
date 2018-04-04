@@ -10,11 +10,9 @@ add_library(openmp_target INTERFACE)
 target_include_directories(openmp_target INTERFACE ${OpenMP_CXX_FLAGS})
 target_link_libraries(openmp_target INTERFACE ${OpenMP_CXX_FLAGS})
 
-# --- Boost ----------------------------------------------------------------
-find_package(Boost COMPONENTS program_options)
-add_library(program_options INTERFACE)
-target_include_directories(program_options INTERFACE ${Boost_INCLUDE_DIRS})
-target_link_libraries(program_options INTERFACE ${Boost_PROGRAM_OPTIONS_LIBRARY})
+# --- Command line handler -------------------------------------------------
+add_library(argh_target INTERFACE)
+target_include_directories(argh_target INTERFACE ${CMAKE_CURRENT_SOURCE_DIR})
 
 # --- MPI ------------------------------------------------------------------
 find_package(MPI)
@@ -75,7 +73,7 @@ if (CUDA_FOUND)
 
     if (CMAKE_CXX_COMPILER_ID MATCHES "GNU")
         list(APPEND CUDA_NVCC_FLAGS
-            -Xcompiler -std=c++03
+            -Xcompiler -std=c++11
             -Xcompiler -Wno-vla
             -Xcompiler -fopenmp
             -Xcompiler -fPIC
@@ -86,6 +84,9 @@ if (CUDA_FOUND)
     target_include_directories(cusp_target INTERFACE
         ${CMAKE_CURRENT_SOURCE_DIR}/cusplibrary)
 endif()
+
+# --- VexCL ----------------------------------------------------------------
+find_package(VexCL QUIET)
 
 # --- Trilinos -------------------------------------------------------------
 add_library(trilinos_target INTERFACE)

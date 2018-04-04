@@ -1,8 +1,6 @@
 #include <iostream>
 #include <vector>
 
-#include <boost/program_options.hpp>
-
 #include <amgcl/backend/cuda.hpp>
 #include <amgcl/adapter/crs_tuple.hpp>
 #include <amgcl/make_solver.hpp>
@@ -13,6 +11,7 @@
 #include <amgcl/profiler.hpp>
 
 #include "log_times.hpp"
+#include "argh.h"
 
 namespace amgcl { profiler<backend::cuda_clock> prof; }
 using amgcl::prof;
@@ -78,29 +77,6 @@ void assemble(
 //---------------------------------------------------------------------------
 int main(int argc, char *argv[]) {
     using namespace amgcl;
-    namespace po = boost::program_options;
-
-    po::options_description desc("Options");
-
-    desc.add_options()
-        ("help,h", "Show this help.")
-        (
-         "size,n",
-         po::value<int>()->default_value(150),
-         "The size of the Poisson problem to solve when no system matrix is given. "
-         "Specified as number of grid nodes along each dimension of a unit cube. "
-         "The resulting system will have n*n*n unknowns. "
-        )
-        ;
-
-    po::variables_map vm;
-    po::store(po::parse_command_line(argc, argv, desc), vm);
-    po::notify(vm);
-
-    if (vm.count("help")) {
-        std::cout << desc << std::endl;
-        return 0;
-    }
 
     typedef
         backend::cuda<double> Backend;
@@ -121,8 +97,11 @@ int main(int argc, char *argv[]) {
     Solver::params prm;
     prm.precond.coarsening.relax = 0.75;
 
-    const int n = vm["size"].as<int>();
-    const int n3 = n * n * n;
+    int n;
+
+    argh::parser cmdl(argc, argv);
+    cmdl({"n", "size"}, "150") >> n;
+    int n3 = n * n * n;
 
     std::vector<int> ptr, col;
     std::vector<double> val;

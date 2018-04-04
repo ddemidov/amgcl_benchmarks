@@ -9,7 +9,6 @@
 #include <omp.h>
 #endif
 
-#include <boost/program_options.hpp>
 #include <boost/property_tree/ptree.hpp>
 #include <boost/property_tree/json_parser.hpp>
 #include <boost/foreach.hpp>
@@ -41,6 +40,8 @@
 #include <amgcl/mpi/subdomain_deflation.hpp>
 #include <amgcl/mpi/direct_solver.hpp>
 #include <amgcl/profiler.hpp>
+
+#include "argh.h"
 
 namespace amgcl {
     profiler<> prof;
@@ -169,73 +170,16 @@ int main(int argc, char *argv[]) {
         std::cout << "World size: " << world.size << std::endl;
 
     // Read configuration from command line
-    namespace po = boost::program_options;
-    using std::string;
-    po::options_description desc("Options");
-
-    desc.add_options()
-        ("help,h", "show help")
-        (
-         "binary,B",
-         po::bool_switch()->default_value(false),
-         "When specified, treat input files as binary instead of as MatrixMarket. "
-         "It is assumed the files were converted to binary format with mm2bin utility. "
-        )
-        (
-         "matrix,A",
-         po::value<string>()->required(),
-         "The system matrix in MatrixMarket format"
-        )
-        (
-         "rhs,f",
-         po::value<string>(),
-         "The right-hand side in MatrixMarket format"
-        )
-        (
-         "part,s",
-         po::value<string>()->required(),
-         "Partitioning of the problem in MatrixMarket format"
-        )
-        (
-         "pmask,m",
-         po::value<string>()->required(),
-         "The pressure mask in MatrixMarket format. Or, if the parameter has "
-         "the form '%n:m', then each (n+i*m)-th variable is treated as pressure."
-        )
-        (
-         "params,P",
-         po::value<string>(),
-         "parameter file in json format"
-        )
-        (
-         "prm,p",
-         po::value< std::vector<string> >()->multitoken(),
-         "Parameters specified as name=value pairs. "
-         "May be provided multiple times. Examples:\n"
-         "  -p solver.tol=1e-3\n"
-         "  -p precond.coarse_enough=300"
-        )
-        ;
-
-    po::variables_map vm;
-    po::store(po::parse_command_line(argc, argv, desc), vm);
-
-    if (vm.count("help")) {
-        if (world.rank == 0)
-            std::cout << desc << std::endl;
-        return 0;
-    }
-
-    po::notify(vm);
+    argh::parser cmdl(argc, argv);
 
     boost::property_tree::ptree prm;
-    if (vm.count("params")) read_json(vm["params"].as<string>(), prm);
 
-    if (vm.count("prm")) {
-        BOOST_FOREACH(string v, vm["prm"].as<std::vector<string> >()) {
-            amgcl::put(prm, v);
-        }
-    }
+    std::string prm_file;
+    if (cmdl({"P", "params"}) >> prm_file)
+        read_json(prm_file, prm);
+
+    for(size_t i = 1; i < cmdl.size(); ++i)
+        amgcl::put(prm, cmdl(i).str());
 
     prof.tic("read problem");
     std::vector<ptrdiff_t> ptr;
@@ -245,7 +189,9 @@ int main(int argc, char *argv[]) {
 
     std::vector<ptrdiff_t> domain = read_problem(
             world,
-            vm["matrix"].as<string>(), vm["rhs"].as<string>(), vm["part"].as<string>(),
+            cmdl({"A", "matrix"}).str(),
+            cmdl({"f", "rhs"}).str(),
+            cmdl({"s", "part"}).str(),
             ptr, col, val, rhs
             );
 

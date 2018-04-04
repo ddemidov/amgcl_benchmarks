@@ -1,8 +1,6 @@
 #include <iostream>
 #include <string>
 
-#include <boost/program_options.hpp>
-
 #include <amgcl/adapter/crs_tuple.hpp>
 #include <amgcl/backend/vexcl.hpp>
 #include <amgcl/make_solver.hpp>
@@ -18,51 +16,17 @@
 #include <amgcl/profiler.hpp>
 
 #include "log_times.hpp"
+#include "argh.h"
 
 namespace amgcl { profiler<> prof; }
 
 //---------------------------------------------------------------------------
 int main(int argc, char *argv[]) {
     using namespace amgcl;
-    namespace po = boost::program_options;
 
-    po::options_description desc("Options");
-
-    desc.add_options()
-        ("help,h", "show help")
-        (
-         "matrix,A",
-         po::value<std::string>()->default_value("A.bin"),
-         "The system matrix in MatrixMarket format"
-        )
-        (
-         "rhs,f",
-         po::value<std::string>()->default_value("b.bin"),
-         "The right-hand side in MatrixMarket format"
-        )
-        (
-         "tol,e",
-         po::value<double>()->default_value(1e-4),
-         "Tolerance"
-        )
-        (
-         "pressure-iters",
-         po::value<int>()->default_value(16),
-         "Number of iterations for the pressure subproblem"
-        )
-        ;
-
-    po::variables_map vm;
-    po::store(po::parse_command_line(argc, argv, desc), vm);
-
-    if (vm.count("help")) {
-        std::cout << desc << std::endl;
-        return 0;
-    }
-
-    po::notify(vm);
-
-    double tol = vm["tol"].as<double>();
+    argh::parser cmdl(argc, argv);
+    double tol;
+    cmdl({"e", "tol"}, "1e-4") >> tol;
 
     vex::Context ctx( vex::Filter::Env && vex::Filter::Count(1) );
     std::cout << ctx << std::endl;
@@ -74,8 +38,8 @@ int main(int argc, char *argv[]) {
     std::vector<ptrdiff_t> ptr, col;
     std::vector<double> val, rhs;
 
-    io::read_crs(vm["matrix"].as<std::string>(), rows, ptr, col, val);
-    io::read_dense(vm["rhs"].as<std::string>(), n, m, rhs);
+    io::read_crs(cmdl({"A", "matrix"}, "A.bin").str(), rows, ptr, col, val);
+    io::read_dense(cmdl({"f", "rhs"}, "b.bin").str(), n, m, rhs);
     prof.toc("reading");
 
     typedef backend::vexcl<double> Backend;
@@ -104,7 +68,8 @@ int main(int argc, char *argv[]) {
     prm.solver.tol = tol;
     prm.precond.usolver.solver.tol = tol * 10;
     prm.precond.psolver.solver.tol = tol * 10;
-    prm.precond.psolver.solver.maxiter = vm["pressure-iters"].as<int>();
+
+    cmdl("pressure-iters", "16") >> prm.precond.psolver.solver.maxiter;
     prm.precond.psolver.precond.relax.solve.iters = 3;
 
     prm.precond.pmask.resize(n, 0);

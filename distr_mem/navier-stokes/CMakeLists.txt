@@ -2,7 +2,7 @@ add_executable(dmem_ns_amgcl amgcl.cpp)
 target_link_libraries(dmem_ns_amgcl
     amgcl::amgcl
     mpi_target
-    program_options
+    argh_target
     )
 
 if (TARGET eigen_target)
@@ -26,8 +26,8 @@ if (CUDA_FOUND)
     target_link_libraries(dmem_ns_amgcl_cuda
         amgcl::amgcl
         mpi_target
-        program_options
         ${CUDA_cusparse_LIBRARY}
+        argh_target
         )
 endif()
 
@@ -38,4 +38,4 @@ target_include_directories(metis_target INTERFACE ${METIS_INCLUDES})
 target_link_libraries(metis_target INTERFACE ${METIS_LIBRARY})
 
 add_executable(partition partition.cpp)
-target_link_libraries(partition amgcl::amgcl metis_target program_options)
+target_link_libraries(partition amgcl::amgcl metis_target argh_target)

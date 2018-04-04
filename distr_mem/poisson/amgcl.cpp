@@ -9,7 +9,6 @@
 #endif
 
 #include <boost/scope_exit.hpp>
-#include <boost/program_options.hpp>
 #include <boost/property_tree/ptree.hpp>
 #include <boost/property_tree/json_parser.hpp>
 
@@ -33,6 +32,7 @@
 #include <amgcl/runtime.hpp>
 #include <amgcl/profiler.hpp>
 
+#include "argh.h"
 #include "domain_partition.hpp"
 
 namespace amgcl {
@@ -106,85 +106,23 @@ int main(int argc, char *argv[]) {
     bool symm_dirichlet = true;
     std::string parameter_file;
 
-    namespace po = boost::program_options;
-    po::options_description desc("Options");
+    argh::parser cmdl(argc, argv);
 
-    desc.add_options()
-        ("help,h", "show help")
-        (
-         "symbc",
-         po::value<bool>(&symm_dirichlet)->default_value(symm_dirichlet),
-         "Use symmetric Dirichlet conditions in laplace2d"
-        )
-        (
-         "size,n",
-         po::value<ptrdiff_t>(&n)->default_value(n),
-         "domain size"
-        )
-        (
-         "coarsening,c",
-         po::value<amgcl::runtime::coarsening::type>(&coarsening)->default_value(coarsening),
-         "ruge_stuben, aggregation, smoothed_aggregation, smoothed_aggr_emin"
-        )
-        (
-         "relaxation,r",
-         po::value<amgcl::runtime::relaxation::type>(&relaxation)->default_value(relaxation),
-         "gauss_seidel, ilu0, iluk, ilut, damped_jacobi, spai0, spai1, chebyshev"
-        )
-        (
-         "iter_solver,i",
-         po::value<amgcl::runtime::solver::type>(&iterative_solver)->default_value(iterative_solver),
-         "cg, bicgstab, bicgstabl, gmres"
-        )
-        (
-         "dir_solver,d",
-         po::value<amgcl::runtime::mpi::dsolver::type>(&direct_solver)->default_value(direct_solver),
-         "skyline_lu"
-#ifdef AMGCL_HAVE_PASTIX
-         ", pastix"
-#endif
-        )
-        (
-         "cd",
-         po::bool_switch(&constant_deflation),
-         "Use constant deflation (linear deflation is used by default)"
-        )
-        (
-         "params,P",
-         po::value<std::string>(&parameter_file),
-         "parameter file in json format"
-        )
-        (
-         "prm,p",
-         po::value< std::vector<std::string> >()->multitoken(),
-         "Parameters specified as name=value pairs. "
-         "May be provided multiple times. Examples:\n"
-         "  -p solver.tol=1e-3\n"
-         "  -p precond.coarse_enough=300"
-        )
-        (
-         "just-relax,0",
-         po::bool_switch(&just_relax),
-         "Do not create AMG hierarchy, use relaxation as preconditioner"
-        )
-        ;
-
-    po::variables_map vm;
-    po::store(po::parse_command_line(argc, argv, desc), vm);
-    po::notify(vm);
-
-    if (vm.count("help")) {
-        std::cout << desc << std::endl;
-        return 0;
-    }
+    cmdl({"n","size"}, 128) >> n;
+    cmdl("symbc") >> symm_dirichlet;
+    cmdl({"c", "coarsening"}, "smoothed_aggregation") >> coarsening;
+    cmdl({"r", "relaxation"}, "spai0") >> relaxation;
+    cmdl({"i", "isolver"}, "bicgstabl") >> iterative_solver;
+    cmdl({"d", "dsolver"}, "skyline_lu") >> direct_solver;
+    constant_deflation = cmdl["cd"];
+    cmdl({"P", "params"}, "") >> parameter_file;
+    just_relax = cmdl[{"0", "just_relax"}];
 
     boost::property_tree::ptree prm;
-    if (vm.count("params")) read_json(parameter_file, prm);
+    if (!parameter_file.empty()) read_json(parameter_file, prm);
 
-    if (vm.count("prm")) {
-        BOOST_FOREACH(std::string v, vm["prm"].as< std::vector<std::string> >()) {
-            amgcl::put(prm, v);
-        }
+    for(size_t i = 1; i < cmdl.size(); ++i) {
+        amgcl::put(prm, cmdl(i).str());
     }
 
     prm.put("isolver.type", iterative_solver);
@@ -296,7 +234,8 @@ int main(int argc, char *argv[]) {
 
 #if defined(SOLVER_BACKEND_VEXCL)
     vex::Context ctx(vex::Filter::Env);
-    std::cout << ctx << std::endl;
+    if (world.rank == 0)
+        std::cout << ctx << std::endl;
     bprm.q = ctx;
 #elif defined(SOLVER_BACKEND_CUDA)
     cusparseCreate(&bprm.cusparse_handle);

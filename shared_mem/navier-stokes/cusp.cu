@@ -1,8 +1,6 @@
 #include <iostream>
 #include <fstream>
 
-#include <boost/program_options.hpp>
-
 #include <cusp/csr_matrix.h>
 #include <cusp/gallery/diffusion.h>
 #include <cusp/gallery/poisson.h>
@@ -13,6 +11,7 @@
 #include <performance/timer.h>
 
 #include "log_times.hpp"
+#include "argh.h"
 
 //---------------------------------------------------------------------------
 int read_problem(std::string A_file, std::string f_file,
@@ -58,42 +57,15 @@ using namespace cusp::precond::aggregation;
 
 //---------------------------------------------------------------------------
 int main(int argc, char *argv[]) {
-    namespace po = boost::program_options;
-
-    po::options_description desc("Options");
-
-    desc.add_options()
-        ("help,h", "Show this help.")
-        ("matrix,A",
-         po::value<std::string>()->default_value("A.bin"),
-         "System matrix in binary format."
-        )
-        (
-         "rhs,f",
-         po::value<std::string>()->default_value("b.bin"),
-         "The RHS vector in binary format."
-        )
-        (
-         "tol,e",
-         po::value<double>()->default_value(1e-4),
-         "Tolerance"
-        )
-        ;
-
-    po::variables_map vm;
-    po::store(po::parse_command_line(argc, argv, desc), vm);
-    po::notify(vm);
-
-    if (vm.count("help")) {
-        std::cout << desc << std::endl;
-        return 0;
-    }
+    argh::parser cmdl(argc, argv);
 
     typedef cusp::device_memory mem_space;
 
     std::vector<int> ptr, col;
     std::vector<double> val, rhs;
-    int n = read_problem(vm["matrix"].as<std::string>(), vm["rhs"].as<std::string>(),
+    int n = read_problem(
+            cmdl({"A", "matrix"}, "A.bin").str(),
+            cmdl({"f", "rhs"}, "b.bin").str(),
             ptr, col, val, rhs);
 
     timer t0;
@@ -110,7 +82,9 @@ int main(int argc, char *argv[]) {
     cusp::array1d<double, mem_space> x(n, 0);
     cusp::array1d<double, mem_space> b(rhs);
 
-    cusp::monitor<double> monitor(b, 1000, vm["tol"].as<double>());
+    double tol;
+    cmdl({"e", "tol"}, "1e-4") >> tol;
+    cusp::monitor<double> monitor(b, 1000, tol);
 
     // solve
     timer t1;

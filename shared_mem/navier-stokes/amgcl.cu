@@ -1,7 +1,6 @@
 #include <iostream>
 #include <vector>
 
-#include <boost/program_options.hpp>
 #include <boost/property_tree/ptree.hpp>
 
 #include <amgcl/value_type/static_matrix.hpp>
@@ -17,6 +16,7 @@
 #include <amgcl/profiler.hpp>
 
 #include "log_times.hpp"
+#include "argh.h"
 
 namespace amgcl { profiler<backend::cuda_clock> prof; }
 using amgcl::prof;
@@ -24,7 +24,6 @@ using amgcl::prof;
 //---------------------------------------------------------------------------
 int main(int argc, char *argv[]) {
     using namespace amgcl;
-    namespace po = boost::program_options;
 
     typedef backend::cuda<double> Backend;
     typedef make_solver<
@@ -32,41 +31,14 @@ int main(int argc, char *argv[]) {
         solver::lgmres<Backend>
         > Solver;
 
-    po::options_description desc("Options");
-
-    desc.add_options()
-        ("help,h", "Show this help.")
-        ("matrix,A",
-         po::value<std::string>()->default_value("A.bin"),
-         "System matrix in binary format."
-        )
-        (
-         "rhs,f",
-         po::value<std::string>()->default_value("b.bin"),
-         "The RHS vector in binary format."
-        )
-        (
-         "tol,e",
-         po::value<double>()->default_value(1e-4),
-         "Tolerance"
-        )
-        ;
-
-    po::variables_map vm;
-    po::store(po::parse_command_line(argc, argv, desc), vm);
-    po::notify(vm);
-
-    if (vm.count("help")) {
-        std::cout << desc << std::endl;
-        return 0;
-    }
+    argh::parser cmdl(argc, argv);
 
     Backend::params bprm;
     cusparseCreate(&bprm.cusparse_handle);
 
     Solver::params prm;
     prm.solver.maxiter = 500;
-    prm.solver.tol = vm["tol"].as<double>();
+    cmdl({"e", "tol"}, "1e-4") >> prm.solver.tol;
     prm.precond.coarsening.aggr.block_size = 4;
 
     size_t rows, n, m;
@@ -74,8 +46,8 @@ int main(int argc, char *argv[]) {
     std::vector<double> val, f;
 
     prof.tic("read");
-    io::read_crs(vm["matrix"].as<std::string>(), rows, ptr, col, val);
-    io::read_dense(vm["rhs"].as<std::string>(), n, m, f);
+    io::read_crs(cmdl({"A", "matrix"}, "A.bin").str(), rows, ptr, col, val);
+    io::read_dense(cmdl({"f", "rhs"}, "b.bin").str(), n, m, f);
     prof.toc("read");
 
     assert(n == rows && m == 1);

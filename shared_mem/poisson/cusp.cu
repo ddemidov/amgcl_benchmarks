@@ -1,7 +1,5 @@
 #include <iostream>
 
-#include <boost/program_options.hpp>
-
 #include <cusp/csr_matrix.h>
 #include <cusp/gallery/diffusion.h>
 #include <cusp/gallery/poisson.h>
@@ -12,6 +10,7 @@
 #include <performance/timer.h>
 
 #include "log_times.hpp"
+#include "argh.h"
 
 //---------------------------------------------------------------------------
 void assemble(
@@ -75,34 +74,12 @@ using namespace cusp::precond::aggregation;
 
 //---------------------------------------------------------------------------
 int main(int argc, char *argv[]) {
-    namespace po = boost::program_options;
-
-    po::options_description desc("Options");
-
-    desc.add_options()
-        ("help,h", "Show this help.")
-        (
-         "size,n",
-         po::value<int>()->default_value(150),
-         "The size of the Poisson problem to solve when no system matrix is given. "
-         "Specified as number of grid nodes along each dimension of a unit cube. "
-         "The resulting system will have n*n*n unknowns. "
-        )
-        ;
-
-    po::variables_map vm;
-    po::store(po::parse_command_line(argc, argv, desc), vm);
-    po::notify(vm);
-
-    if (vm.count("help")) {
-        std::cout << desc << std::endl;
-        return 0;
-    }
-
+    argh::parser cmdl(argc, argv);
     typedef cusp::device_memory mem_space;
 
-    const int n = vm["size"].as<int>();
-    const int n3 = n * n * n;
+    int n;
+    cmdl({"n", "size"}, "150") >> n;
+    int n3 = n * n * n;
 
     std::vector<int> ptr, col;
     std::vector<double> val;

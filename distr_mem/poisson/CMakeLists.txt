@@ -14,7 +14,7 @@ add_executable(dmem_poisson_amgcl amgcl.cpp)
 target_link_libraries(dmem_poisson_amgcl
     amgcl::amgcl
     mpi_target
-    program_options
+    argh_target
     )
 
 if (TARGET pastix_target)
@@ -34,6 +34,25 @@ target_link_libraries(dmem_poisson_petsc
 add_executable(dmem_poisson_trilinos trilinos.cpp)
 target_link_libraries(dmem_poisson_trilinos mpi_target trilinos_target)
 
+if (TARGET VexCL::CUDA)
+    add_executable(dmem_poisson_amgcl_vexcl amgcl.cpp)
+    target_compile_definitions(dmem_poisson_amgcl_vexcl PRIVATE SOLVER_BACKEND_VEXCL)
+    target_link_libraries(dmem_poisson_amgcl_vexcl
+        amgcl::amgcl
+        mpi_target
+        argh_target
+        VexCL::CUDA
+        )
+
+    if (TARGET pastix_target)
+        target_link_libraries(dmem_poisson_amgcl_vexcl pastix_target)
+    endif()
+
+    if (TARGET eigen_target)
+        target_link_libraries(dmem_poisson_amgcl_vexcl eigen_target)
+    endif()
+endif()
+
 if (CUDA_FOUND)
     configure_file(
         ${CMAKE_CURRENT_SOURCE_DIR}/amgcl.cpp
@@ -51,7 +70,7 @@ if (CUDA_FOUND)
     target_link_libraries(dmem_poisson_amgcl_cuda
         amgcl::amgcl
         mpi_target
-        program_options
         ${CUDA_cusparse_LIBRARY}
+        argh_target
         )
 endif()
