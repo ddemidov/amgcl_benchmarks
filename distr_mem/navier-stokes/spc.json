@@ -1,0 +1,26 @@
+{
+    "solver": {
+        "type" : "fgmres",
+        "M": 50,
+        "tol" : 1e-4
+    },
+    "precond": {
+        "usolver": {
+            "solver": {
+                "type" : "gmres",
+                "tol": 0.001,
+                "maxiter": 5
+            }
+        },
+        "psolver": {
+            "isolver": {
+                "type" : "gmres",
+                "tol": 0.01,
+                "maxiter": 20
+            },
+            "local" : {
+                "coarse_enough" : 500
+            }
+        }
+    }
+}
