@@ -44,6 +44,7 @@ endif()
 #----------------------------------------------------------------------------
 # Find Pastix
 #----------------------------------------------------------------------------
+find_package(Metis  QUIET)
 find_package(Scotch QUIET)
 find_package(Pastix QUIET)
 find_package(BLAS   QUIET)

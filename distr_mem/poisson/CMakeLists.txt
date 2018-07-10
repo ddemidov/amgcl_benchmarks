@@ -34,6 +34,10 @@ if (TARGET eigen_target)
     target_link_libraries(dmem_poisson_amgcl_sdd eigen_target)
 endif()
 
+if (TARGET Metis::metis)
+    target_link_libraries(dmem_poisson_amgcl Metis::metis)
+endif()
+
 add_executable(dmem_poisson_petsc petsc.cpp)
 target_link_libraries(dmem_poisson_petsc
     mpi_target
