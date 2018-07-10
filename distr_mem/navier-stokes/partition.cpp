@@ -240,7 +240,7 @@ int main(int argc, char *argv[]) {
             std::copy(lcol.begin(), lcol.end(), col.begin());
         } else {
             size_t cols;
-            boost::tie(rows, cols) = amgcl::io::mm_reader(ifile)(ptr, col, val);
+            std::tie(rows, cols) = amgcl::io::mm_reader(ifile)(ptr, col, val);
             precondition(rows == cols, "Non-square system matrix");
         }
 

@@ -53,7 +53,7 @@ int main(int argc, char *argv[]) {
     assert(n == rows && m == 1);
 
     prof.tic("setup");
-    Solver solve(boost::tie(rows, ptr, col, val), prm, bprm);
+    Solver solve(std::tie(rows, ptr, col, val), prm, bprm);
     double tm_setup = prof.toc("setup");
 
     std::cout << solve << std::endl;
@@ -65,7 +65,7 @@ int main(int argc, char *argv[]) {
     double error;
 
     prof.tic("solve");
-    boost::tie(iters, error) = solve(F, X);
+    std::tie(iters, error) = solve(F, X);
     double tm_solve = prof.toc("solve");
 
     std::cout

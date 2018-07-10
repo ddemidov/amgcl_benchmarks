@@ -57,7 +57,7 @@ int main(int argc, char *argv[]) {
     int nb = rows / 4;
 
     prof.tic("setup");
-    Solver solve(adapter::block_matrix<value_type>(boost::tie(rows, ptr, col, val)), prm);
+    Solver solve(adapter::block_matrix<value_type>(std::tie(rows, ptr, col, val)), prm);
     double tm_setup = prof.toc("setup");
 
     std::cout << solve << std::endl;
@@ -70,7 +70,7 @@ int main(int argc, char *argv[]) {
     double error;
 
     prof.tic("solve");
-    boost::tie(iters, error) = solve(F, X);
+    std::tie(iters, error) = solve(F, X);
     double tm_solve = prof.toc("solve");
 
     std::cout

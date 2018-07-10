@@ -93,8 +93,6 @@ int main(int argc, char *argv[]) {
 
     Solver::params prm;
 
-    prm.precond.coarsening.relax = 0.75;
-
     argh::parser cmdl(argc, argv);
     int n;
     cmdl({"n", "size"}, "150") >> n;
@@ -114,7 +112,7 @@ int main(int argc, char *argv[]) {
     prof.toc("assemble");
 
     prof.tic("setup");
-    Solver solve(boost::tie(n3, ptr, col, val), prm);
+    Solver solve(std::tie(n3, ptr, col, val), prm);
     double tm_setup = prof.toc("setup");
 
     std::cout << solve << std::endl;
@@ -123,7 +121,7 @@ int main(int argc, char *argv[]) {
     double error;
 
     prof.tic("solve");
-    boost::tie(iters, error) = solve(f, x);
+    std::tie(iters, error) = solve(f, x);
     double tm_solve = prof.toc("solve");
 
     std::cout

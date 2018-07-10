@@ -52,7 +52,7 @@ read_problem(const Epetra_MpiComm &Comm,
     // Read partition
     int n,m;
     std::vector<int> part;
-    boost::tie(n, m) = io::mm_reader(p_file)(part);
+    std::tie(n, m) = io::mm_reader(p_file)(part);
 
     TEUCHOS_ASSERT_EQUALITY(m, 1);
 

@@ -73,7 +73,7 @@ if (CUDA_FOUND)
 
     if (CMAKE_CXX_COMPILER_ID MATCHES "GNU")
         list(APPEND CUDA_NVCC_FLAGS
-            -Xcompiler -std=c++11
+            -std=c++11
             -Xcompiler -Wno-vla
             -Xcompiler -fopenmp
             -Xcompiler -fPIC

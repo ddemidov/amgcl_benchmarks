@@ -33,12 +33,16 @@
 #include <amgcl/io/binary.hpp>
 #include <amgcl/io/mm.hpp>
 #include <amgcl/adapter/crs_tuple.hpp>
-#include <amgcl/runtime.hpp>
+#include <amgcl/amg.hpp>
+#include <amgcl/solver/runtime.hpp>
+#include <amgcl/coarsening/runtime.hpp>
+#include <amgcl/relaxation/runtime.hpp>
+#include <amgcl/relaxation/as_preconditioner.hpp>
 #include <amgcl/mpi/make_solver.hpp>
 #include <amgcl/mpi/schur_pressure_correction.hpp>
 #include <amgcl/mpi/block_preconditioner.hpp>
 #include <amgcl/mpi/subdomain_deflation.hpp>
-#include <amgcl/mpi/direct_solver.hpp>
+#include <amgcl/mpi/direct_solver/runtime.hpp>
 #include <amgcl/profiler.hpp>
 
 #include "argh.h"
@@ -67,8 +71,8 @@ std::vector<ptrdiff_t> read_problem(
     std::vector<ptrdiff_t> domain(world.size + 1, 0);
     std::vector<int> part;
 
-    boost::tie(n, m) = amgcl::io::mm_reader(part_file)(part);
-    BOOST_FOREACH(int p, part) {
+    std::tie(n, m) = amgcl::io::mm_reader(part_file)(part);
+    for(int p : part) {
         ++domain[p+1];
         precondition(p < world.size, "MPI world does not correspond to partition");
     }
@@ -203,7 +207,7 @@ int main(int argc, char *argv[]) {
     prm.put("precond.pmask", static_cast<void*>(&pm[0]));
     prm.put("precond.pmask_size", chunk);
 
-    boost::function<double(ptrdiff_t,unsigned)> dv = amgcl::mpi::constant_deflation(1);
+    std::function<double(ptrdiff_t,unsigned)> dv = amgcl::mpi::constant_deflation(1);
     prm.put("precond.psolver.num_def_vec", 1);
     prm.put("precond.psolver.def_vec", &dv);
 
@@ -217,8 +221,8 @@ int main(int argc, char *argv[]) {
     cusparseCreate(&bprm.cusparse_handle);
 #endif
 
-    boost::shared_ptr<Backend::vector> f = Backend::copy_vector(rhs, bprm);
-    boost::shared_ptr<Backend::vector> x = Backend::create_vector(chunk, bprm);
+    auto f = Backend::copy_vector(rhs, bprm);
+    auto x = Backend::create_vector(chunk, bprm);
 
     amgcl::backend::clear(*x);
 
@@ -230,26 +234,26 @@ int main(int argc, char *argv[]) {
             amgcl::mpi::schur_pressure_correction<
                 amgcl::mpi::make_solver<
                     amgcl::mpi::block_preconditioner<
-                        amgcl::runtime::relaxation::as_preconditioner<Backend>
+                        amgcl::relaxation::as_preconditioner<Backend, amgcl::runtime::relaxation::wrapper>
                         >,
-                    amgcl::runtime::iterative_solver
+                    amgcl::runtime::solver::wrapper
                     >,
                 amgcl::mpi::subdomain_deflation<
-                    amgcl::runtime::amg<Backend>,
-                    amgcl::runtime::iterative_solver,
-                    amgcl::runtime::mpi::direct_solver<double>
+                    amgcl::amg<Backend, amgcl::runtime::coarsening::wrapper, amgcl::runtime::relaxation::wrapper>,
+                    amgcl::runtime::solver::wrapper,
+                    amgcl::runtime::mpi::direct::solver<double>
                     >
                 >,
-            amgcl::runtime::iterative_solver
+            amgcl::runtime::solver::wrapper
             > Solver;
 
-    Solver solve(world, boost::tie(chunk, ptr, col, val), prm, bprm);
+    Solver solve(world, std::tie(chunk, ptr, col, val), prm, bprm);
     double tm_setup = prof.toc("setup");
 
     prof.tic("solve");
     size_t iters;
     double resid;
-    boost::tie(iters, resid) = solve(*f, *x);
+    std::tie(iters, resid) = solve(*f, *x);
     double tm_solve = prof.toc("solve");
 
     if (world.rank == 0) {

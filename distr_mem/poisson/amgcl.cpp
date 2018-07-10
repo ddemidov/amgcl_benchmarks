@@ -2,6 +2,7 @@
 #include <iomanip>
 #include <fstream>
 #include <vector>
+#include <array>
 #include <numeric>
 #include <cmath>
 #ifdef _OPENMP
@@ -9,6 +10,7 @@
 #endif
 
 #include <boost/scope_exit.hpp>
+#include <boost/program_options.hpp>
 #include <boost/property_tree/ptree.hpp>
 #include <boost/property_tree/json_parser.hpp>
 
@@ -27,9 +29,13 @@
    typedef amgcl::backend::builtin<double> Backend;
 #endif
 
-#include <amgcl/mpi/direct_solver.hpp>
+#include <amgcl/mpi/direct_solver/runtime.hpp>
 #include <amgcl/mpi/subdomain_deflation.hpp>
-#include <amgcl/runtime.hpp>
+#include <amgcl/amg.hpp>
+#include <amgcl/solver/runtime.hpp>
+#include <amgcl/coarsening/runtime.hpp>
+#include <amgcl/relaxation/runtime.hpp>
+#include <amgcl/relaxation/as_preconditioner.hpp>
 #include <amgcl/profiler.hpp>
 
 #include "argh.h"
@@ -100,7 +106,7 @@ int main(int argc, char *argv[]) {
     amgcl::runtime::coarsening::type   coarsening       = amgcl::runtime::coarsening::smoothed_aggregation;
     amgcl::runtime::relaxation::type   relaxation       = amgcl::runtime::relaxation::spai0;
     amgcl::runtime::solver::type       iterative_solver = amgcl::runtime::solver::bicgstabl;
-    amgcl::runtime::mpi::dsolver::type direct_solver    = amgcl::runtime::mpi::dsolver::skyline_lu;
+    amgcl::runtime::mpi::direct::type  direct_solver    = amgcl::runtime::mpi::direct::skyline_lu;
 
     bool just_relax = false;
     bool symm_dirichlet = true;
@@ -241,15 +247,15 @@ int main(int argc, char *argv[]) {
     cusparseCreate(&bprm.cusparse_handle);
 #endif
 
-    boost::shared_ptr<Backend::vector> f = Backend::copy_vector(rhs, bprm);
-    boost::shared_ptr<Backend::vector> x = Backend::create_vector(chunk, bprm);
+    auto f = Backend::copy_vector(rhs, bprm);
+    auto x = Backend::create_vector(chunk, bprm);
 
     amgcl::backend::clear(*x);
 
     size_t iters;
     double resid, tm_setup, tm_solve;
 
-    boost::function<double(ptrdiff_t, unsigned)> def_vec = boost::cref(def);
+    std::function<double(ptrdiff_t, unsigned)> def_vec = std::cref(def);
     prm.put("num_def_vec", def.dim());
     prm.put("def_vec",     &def_vec);
 
@@ -260,16 +266,16 @@ int main(int argc, char *argv[]) {
         prof.tic("setup");
         typedef
             amgcl::mpi::subdomain_deflation<
-                amgcl::runtime::relaxation::as_preconditioner< Backend >,
-                amgcl::runtime::iterative_solver,
-                amgcl::runtime::mpi::direct_solver<double>
+                amgcl::relaxation::as_preconditioner<Backend, amgcl::runtime::relaxation::wrapper >,
+                amgcl::runtime::solver::wrapper,
+                amgcl::runtime::mpi::direct::solver<double>
             > SDD;
 
-        SDD solve(world, boost::tie(chunk, ptr, col, val), prm, bprm);
+        SDD solve(world, std::tie(chunk, ptr, col, val), prm, bprm);
         tm_setup = prof.toc("setup");
 
         prof.tic("solve");
-        boost::tie(iters, resid) = solve(*f, *x);
+        std::tie(iters, resid) = solve(*f, *x);
         tm_solve = prof.toc("solve");
     } else {
         prm.put("local.coarsening.type", coarsening);
@@ -278,16 +284,16 @@ int main(int argc, char *argv[]) {
         prof.tic("setup");
         typedef
             amgcl::mpi::subdomain_deflation<
-                amgcl::runtime::amg< Backend >,
-                amgcl::runtime::iterative_solver,
-                amgcl::runtime::mpi::direct_solver<double>
+                amgcl::amg<Backend, amgcl::runtime::coarsening::wrapper, amgcl::runtime::relaxation::wrapper>,
+                amgcl::runtime::solver::wrapper,
+                amgcl::runtime::mpi::direct::solver<double>
             > SDD;
 
-        SDD solve(world, boost::tie(chunk, ptr, col, val), prm, bprm);
+        SDD solve(world, std::tie(chunk, ptr, col, val), prm, bprm);
         tm_setup = prof.toc("setup");
 
         prof.tic("solve");
-        boost::tie(iters, resid) = solve(*f, *x);
+        std::tie(iters, resid) = solve(*f, *x);
         tm_solve = prof.toc("solve");
     }
     } catch(const std::exception &e) {
@@ -308,7 +314,7 @@ int main(int argc, char *argv[]) {
         int nt = 1;
 #endif
         std::ostringstream log_name;
-        log_name << "amgcl";
+        log_name << "amgcl_sdd";
         if (constant_deflation) log_name << "_const";
         log_name << ".txt";
 
@@ -317,5 +323,4 @@ int main(int argc, char *argv[]) {
             << "\t" << tm_setup << "\t" << tm_solve
             << "\t" << iters << "\t" << std::endl;
     }
-
 }

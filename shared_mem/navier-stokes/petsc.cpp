@@ -3,6 +3,7 @@
 #include <tuple>
 #include <memory>
 #include <algorithm>
+#include <cassert>
 
 #include <petscksp.h>
 #include <petsctime.h>
@@ -27,7 +28,7 @@ void read_problem(std::string A_file, std::string f_file, std::string p_file,
     // Read partition
     int n,m;
     std::vector<int> part;
-    boost::tie(n, m) = io::mm_reader(p_file)(part);
+    std::tie(n, m) = io::mm_reader(p_file)(part);
 
     assert(m == 1);
 

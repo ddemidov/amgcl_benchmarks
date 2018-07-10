@@ -1,6 +1,8 @@
 #include <iostream>
 #include <string>
 
+#include <boost/property_tree/ptree.hpp>
+
 #include <amgcl/adapter/crs_tuple.hpp>
 #include <amgcl/backend/vexcl.hpp>
 #include <amgcl/make_solver.hpp>
@@ -78,7 +80,7 @@ int main(int argc, char *argv[]) {
 
 
     prof.tic_cl("setup");
-    Solver solve(boost::tie(rows, ptr, col, val), prm, bprm);
+    Solver solve(std::tie(rows, ptr, col, val), prm, bprm);
     double tm_setup = prof.toc("setup");
 
     std::cout << solve << std::endl;
@@ -90,7 +92,7 @@ int main(int argc, char *argv[]) {
     double error;
 
     prof.tic_cl("solve");
-    boost::tie(iters, error) = solve(f, x);
+    std::tie(iters, error) = solve(f, x);
     double tm_solve = prof.toc("solve");
 
     std::cout
