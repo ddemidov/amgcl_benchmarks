@@ -30,12 +30,12 @@
 #endif
 
 #include <amgcl/mpi/direct_solver/runtime.hpp>
-#include <amgcl/mpi/coarsening/runtime.hpp>
-#include <amgcl/mpi/relaxation/runtime.hpp>
-#include <amgcl/mpi/partition/runtime.hpp>
-#include <amgcl/mpi/amg.hpp>
-#include <amgcl/mpi/make_solver.hpp>
+#include <amgcl/mpi/subdomain_deflation.hpp>
+#include <amgcl/amg.hpp>
 #include <amgcl/solver/runtime.hpp>
+#include <amgcl/coarsening/runtime.hpp>
+#include <amgcl/relaxation/runtime.hpp>
+#include <amgcl/relaxation/as_preconditioner.hpp>
 #include <amgcl/profiler.hpp>
 
 #include "argh.h"
@@ -44,6 +44,31 @@
 namespace amgcl {
     profiler<> prof;
 }
+
+struct deflation_vectors {
+    size_t nv;
+    std::vector<double> x;
+    std::vector<double> y;
+    std::vector<double> z;
+
+    deflation_vectors(ptrdiff_t n, size_t nv = 4) : nv(nv), x(n), y(n), z(n) {}
+
+    size_t dim() const { return nv; }
+
+    double operator()(ptrdiff_t i, int j) const {
+        switch(j) {
+            default:
+            case 0:
+                return 1;
+            case 1:
+                return x[i];
+            case 2:
+                return y[i];
+            case 3:
+                return z[i];
+        }
+    }
+};
 
 struct renumbering {
     const domain_partition<3> &part;
@@ -76,7 +101,14 @@ int main(int argc, char *argv[]) {
 
     // Read configuration from command line
     ptrdiff_t n = 128;
+    bool constant_deflation = false;
 
+    amgcl::runtime::coarsening::type   coarsening       = amgcl::runtime::coarsening::smoothed_aggregation;
+    amgcl::runtime::relaxation::type   relaxation       = amgcl::runtime::relaxation::spai0;
+    amgcl::runtime::solver::type       iterative_solver = amgcl::runtime::solver::bicgstabl;
+    amgcl::runtime::mpi::direct::type  direct_solver    = amgcl::runtime::mpi::direct::skyline_lu;
+
+    bool just_relax = false;
     bool symm_dirichlet = true;
     std::string parameter_file;
 
@@ -84,7 +116,13 @@ int main(int argc, char *argv[]) {
 
     cmdl({"n","size"}, 128) >> n;
     cmdl("symbc") >> symm_dirichlet;
+    cmdl({"c", "coarsening"}, "smoothed_aggregation") >> coarsening;
+    cmdl({"r", "relaxation"}, "spai0") >> relaxation;
+    cmdl({"i", "isolver"}, "bicgstabl") >> iterative_solver;
+    cmdl({"d", "dsolver"}, "skyline_lu") >> direct_solver;
+    constant_deflation = cmdl["cd"];
     cmdl({"P", "params"}, "") >> parameter_file;
+    just_relax = cmdl[{"0", "just_relax"}];
 
     boost::property_tree::ptree prm;
     if (!parameter_file.empty()) read_json(parameter_file, prm);
@@ -92,6 +130,9 @@ int main(int argc, char *argv[]) {
     for(size_t i = 1; i < cmdl.size(); ++i) {
         amgcl::put(prm, cmdl(i).str());
     }
+
+    prm.put("isolver.type", iterative_solver);
+    prm.put("dsolver.type", direct_solver);
 
     const ptrdiff_t n3 = n * n * n;
 
@@ -114,6 +155,20 @@ int main(int argc, char *argv[]) {
     hi = part.domain(world.rank).max_corner();
 
     renumbering renum(part, domain);
+
+    deflation_vectors def(chunk, constant_deflation ? 1 : 4);
+    for(ptrdiff_t k = lo[2]; k <= hi[2]; ++k) {
+        for(ptrdiff_t j = lo[1]; j <= hi[1]; ++j) {
+            for(ptrdiff_t i = lo[0]; i <= hi[0]; ++i) {
+                boost::array<ptrdiff_t, 3> p = {{i, j, k}};
+                std::pair<int,ptrdiff_t> v = part.index(p);
+
+                def.x[v.second] = (i - (lo[0] + hi[0]) / 2);
+                def.y[v.second] = (j - (lo[1] + hi[1]) / 2);
+                def.z[v.second] = (k - (lo[2] + hi[2]) / 2);
+            }
+        }
+    }
     prof.toc("partition");
 
     prof.tic("assemble");
@@ -200,30 +255,47 @@ int main(int argc, char *argv[]) {
     size_t iters;
     double resid, tm_setup, tm_solve;
 
+    std::function<double(ptrdiff_t, unsigned)> def_vec = std::cref(def);
+    prm.put("num_def_vec", def.dim());
+    prm.put("def_vec",     &def_vec);
+
     try {
+    if (just_relax) {
+        prm.put("local.type", relaxation);
+
         prof.tic("setup");
         typedef
-            amgcl::mpi::make_solver<
-                amgcl::mpi::amg<
-                    Backend,
-                    amgcl::runtime::mpi::coarsening::wrapper<Backend>,
-                    amgcl::runtime::mpi::relaxation::wrapper<Backend>,
-                    amgcl::runtime::mpi::direct::solver<double>,
-                    amgcl::runtime::mpi::partition::wrapper<Backend>
-                    >,
-                amgcl::runtime::solver::wrapper
-                >
-            Solver;
+            amgcl::mpi::subdomain_deflation<
+                amgcl::relaxation::as_preconditioner<Backend, amgcl::runtime::relaxation::wrapper >,
+                amgcl::runtime::solver::wrapper,
+                amgcl::runtime::mpi::direct::solver<double>
+            > SDD;
 
-        Solver solve(world, std::tie(chunk, ptr, col, val), prm, bprm);
+        SDD solve(world, std::tie(chunk, ptr, col, val), prm, bprm);
         tm_setup = prof.toc("setup");
-
-        if (world.rank == 0)
-            std::cout << solve << std::endl;
 
         prof.tic("solve");
         std::tie(iters, resid) = solve(*f, *x);
         tm_solve = prof.toc("solve");
+    } else {
+        prm.put("local.coarsening.type", coarsening);
+        prm.put("local.relax.type", relaxation);
+
+        prof.tic("setup");
+        typedef
+            amgcl::mpi::subdomain_deflation<
+                amgcl::amg<Backend, amgcl::runtime::coarsening::wrapper, amgcl::runtime::relaxation::wrapper>,
+                amgcl::runtime::solver::wrapper,
+                amgcl::runtime::mpi::direct::solver<double>
+            > SDD;
+
+        SDD solve(world, std::tie(chunk, ptr, col, val), prm, bprm);
+        tm_setup = prof.toc("setup");
+
+        prof.tic("solve");
+        std::tie(iters, resid) = solve(*f, *x);
+        tm_solve = prof.toc("solve");
+    }
     } catch(const std::exception &e) {
         std::cerr << e.what() << std::endl;
         throw e;
@@ -242,7 +314,8 @@ int main(int argc, char *argv[]) {
         int nt = 1;
 #endif
         std::ostringstream log_name;
-        log_name << "amgcl_amg";
+        log_name << "amgcl_sdd";
+        if (constant_deflation) log_name << "_const";
         log_name << ".txt";
 
         std::ofstream log(log_name.str().c_str(), std::ios::app);
