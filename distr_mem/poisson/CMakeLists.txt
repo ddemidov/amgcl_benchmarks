@@ -43,9 +43,11 @@ target_link_libraries(dmem_poisson_petsc
     mpi_target
     petsc_target
     )
+target_include_directories(dmem_poisson_petsc PRIVATE ${Boost_INCLUDE_DIRS})
 
 add_executable(dmem_poisson_trilinos trilinos.cpp)
 target_link_libraries(dmem_poisson_trilinos mpi_target trilinos_target)
+target_include_directories(dmem_poisson_trilinos PRIVATE ${Boost_INCLUDE_DIRS})
 
 if (TARGET VexCL::CUDA)
     add_executable(dmem_poisson_amgcl_vexcl amgcl.cpp)

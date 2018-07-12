@@ -27,6 +27,9 @@ target_link_libraries(mpi_target INTERFACE "${MPI_CXX_LINK_FLAGS} ${MPI_CXX_LIBR
 find_package(amgcl)
 get_property(AMGCL_INCLUDE_DIRS TARGET amgcl::amgcl PROPERTY INTERFACE_INCLUDE_DIRECTORIES)
 
+# --- Boost ----------------------------------------------------------------
+find_package(Boost)
+
 #----------------------------------------------------------------------------
 # Eigen backend
 #----------------------------------------------------------------------------
