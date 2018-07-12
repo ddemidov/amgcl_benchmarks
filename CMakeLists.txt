@@ -95,14 +95,23 @@ find_package(VexCL QUIET)
 # --- Trilinos -------------------------------------------------------------
 add_library(trilinos_target INTERFACE)
 target_include_directories(trilinos_target INTERFACE $ENV{TRILINOS_DIR}/include)
+target_link_libraries(trilinos_target INTERFACE ${BLAS_LIBRARIES})
 
 foreach(lib 
+        ml
+        amesos
         aztecoo
+        ifpack
         epetra
         epetraext
-        ml
-        teuchoscore
+        zoltan
+        zoltan2
         teuchosparameterlist
+        teuchosremainder
+        teuchosnumerics
+        teuchoscomm
+        teuchoscore
+        kokkoscore
         triutils
         )
     find_library(TRILINOS_${lib}_LIBRARY ${lib} PATHS ENV TRILINOS_DIR PATH_SUFFIXES lib)
