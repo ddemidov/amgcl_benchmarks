@@ -268,7 +268,7 @@ int main(int argc, char *argv[]) {
 #else
         int nt = 1;
 #endif
-        std::ofstream log("amgcl_spc.txt", std::ios::app);
+        std::ofstream log("amgcl_spc_sdd.txt", std::ios::app);
         log << domain.back() << "\t" << nt << "\t" << world.size
             << "\t" << tm_setup << "\t" << tm_solve
             << "\t" << iters << "\t" << std::endl;
