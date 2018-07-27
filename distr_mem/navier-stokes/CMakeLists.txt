@@ -17,6 +17,17 @@ if (TARGET eigen_target)
     target_link_libraries(dmem_ns_amgcl eigen_target)
 endif()
 
+add_executable(dmem_ns_amgcl_sdd amgcl_sdd.cpp)
+target_link_libraries(dmem_ns_amgcl_sdd
+    amgcl::amgcl
+    mpi_target
+    argh_target
+    )
+
+if (TARGET eigen_target)
+    target_link_libraries(dmem_ns_amgcl_sdd eigen_target)
+endif()
+
 add_executable(dmem_ns_trilinos trilinos.cpp)
 target_link_libraries(dmem_ns_trilinos mpi_target trilinos_target amgcl::amgcl)
 
@@ -32,6 +43,23 @@ if (CUDA_FOUND)
         OPTIONS -DSOLVER_BACKEND_CUDA)
 
     target_link_libraries(dmem_ns_amgcl_cuda
+        amgcl::amgcl
+        mpi_target
+        ${CUDA_cusparse_LIBRARY}
+        argh_target
+        )
+
+    configure_file(
+        ${CMAKE_CURRENT_SOURCE_DIR}/amgcl_sdd.cpp
+        ${CMAKE_CURRENT_BINARY_DIR}/amgcl_sdd.cu
+        COPYONLY
+        )
+
+    cuda_add_executable(dmem_ns_amgcl_sdd_cuda
+        ${CMAKE_CURRENT_BINARY_DIR}/amgcl_sdd.cu
+        OPTIONS -DSOLVER_BACKEND_CUDA)
+
+    target_link_libraries(dmem_ns_amgcl_sdd_cuda
         amgcl::amgcl
         mpi_target
         ${CUDA_cusparse_LIBRARY}

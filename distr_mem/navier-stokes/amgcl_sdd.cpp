@@ -33,19 +33,17 @@
 #include <amgcl/io/binary.hpp>
 #include <amgcl/io/mm.hpp>
 #include <amgcl/adapter/crs_tuple.hpp>
+#include <amgcl/amg.hpp>
 #include <amgcl/solver/runtime.hpp>
+#include <amgcl/coarsening/runtime.hpp>
+#include <amgcl/relaxation/runtime.hpp>
 #include <amgcl/relaxation/as_preconditioner.hpp>
-#include <amgcl/profiler.hpp>
-
-#include <amgcl/mpi/distributed_matrix.hpp>
 #include <amgcl/mpi/make_solver.hpp>
 #include <amgcl/mpi/schur_pressure_correction.hpp>
 #include <amgcl/mpi/block_preconditioner.hpp>
-#include <amgcl/mpi/amg.hpp>
-#include <amgcl/mpi/coarsening/runtime.hpp>
-#include <amgcl/mpi/relaxation/runtime.hpp>
-#include <amgcl/mpi/partition/runtime.hpp>
+#include <amgcl/mpi/subdomain_deflation.hpp>
 #include <amgcl/mpi/direct_solver/runtime.hpp>
+#include <amgcl/profiler.hpp>
 
 #include "argh.h"
 
@@ -59,7 +57,6 @@ using amgcl::precondition;
 //---------------------------------------------------------------------------
 std::vector<ptrdiff_t> read_problem(
         const amgcl::mpi::communicator &world,
-
         const std::string &A_file,
         const std::string &rhs_file,
         const std::string &part_file,
@@ -210,6 +207,10 @@ int main(int argc, char *argv[]) {
     prm.put("precond.pmask", static_cast<void*>(&pm[0]));
     prm.put("precond.pmask_size", chunk);
 
+    std::function<double(ptrdiff_t,unsigned)> dv = amgcl::mpi::constant_deflation(1);
+    prm.put("precond.psolver.num_def_vec", 1);
+    prm.put("precond.psolver.def_vec", &dv);
+
     Backend::params bprm;
 
 #if defined(SOLVER_BACKEND_VEXCL)
@@ -237,15 +238,10 @@ int main(int argc, char *argv[]) {
                         >,
                     amgcl::runtime::solver::wrapper
                     >,
-                amgcl::mpi::make_solver<
-                    amgcl::mpi::amg<
-                        Backend,
-                        amgcl::runtime::mpi::coarsening::wrapper<Backend>,
-                        amgcl::runtime::mpi::relaxation::wrapper<Backend>,
-                        amgcl::runtime::mpi::direct::solver<double>,
-                        amgcl::runtime::mpi::partition::wrapper<Backend>
-                        >,
-                    amgcl::runtime::solver::wrapper
+                amgcl::mpi::subdomain_deflation<
+                    amgcl::amg<Backend, amgcl::runtime::coarsening::wrapper, amgcl::runtime::relaxation::wrapper>,
+                    amgcl::runtime::solver::wrapper,
+                    amgcl::runtime::mpi::direct::solver<double>
                     >
                 >,
             amgcl::runtime::solver::wrapper
