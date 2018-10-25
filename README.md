@@ -7,7 +7,7 @@ Source code accompanying
 The system matrix and the RHS used for the Navier-Stokes benchmarks
 may be retrieved here:
 
-* Shared memory benchmark: [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.1231961.svg)](https://doi.org/10.5281/zenodo.1231961)
-
-* Distributed memory benchmark: [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.1231818.svg)](https://doi.org/10.5281/zenodo.1231818)
-
+| Description                  | DOI                                                                                                       |
+|------------------------------|-----------------------------------------------------------------------------------------------------------|
+| Shared memory benchmark      | [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.1231961.svg)](https://doi.org/10.5281/zenodo.1231961) |
+| Distributed memory benchmark | [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.1231818.svg)](https://doi.org/10.5281/zenodo.1231818) |
