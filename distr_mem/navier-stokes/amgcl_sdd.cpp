@@ -43,6 +43,7 @@
 #include <amgcl/mpi/block_preconditioner.hpp>
 #include <amgcl/mpi/subdomain_deflation.hpp>
 #include <amgcl/mpi/direct_solver/runtime.hpp>
+#include <amgcl/mpi/solver/runtime.hpp>
 #include <amgcl/profiler.hpp>
 
 #include "argh.h"
@@ -236,15 +237,15 @@ int main(int argc, char *argv[]) {
                     amgcl::mpi::block_preconditioner<
                         amgcl::relaxation::as_preconditioner<Backend, amgcl::runtime::relaxation::wrapper>
                         >,
-                    amgcl::runtime::solver::wrapper
+                    amgcl::runtime::mpi::solver::wrapper<Backend>
                     >,
                 amgcl::mpi::subdomain_deflation<
                     amgcl::amg<Backend, amgcl::runtime::coarsening::wrapper, amgcl::runtime::relaxation::wrapper>,
-                    amgcl::runtime::solver::wrapper,
+                    amgcl::runtime::mpi::solver::wrapper<Backend>,
                     amgcl::runtime::mpi::direct::solver<double>
                     >
                 >,
-            amgcl::runtime::solver::wrapper
+            amgcl::runtime::mpi::solver::wrapper<Backend>
             > Solver;
 
     Solver solve(world, std::tie(chunk, ptr, col, val), prm, bprm);

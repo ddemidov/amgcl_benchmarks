@@ -31,8 +31,8 @@
 
 #include <amgcl/mpi/direct_solver/runtime.hpp>
 #include <amgcl/mpi/subdomain_deflation.hpp>
+#include <amgcl/mpi/solver/runtime.hpp>
 #include <amgcl/amg.hpp>
-#include <amgcl/solver/runtime.hpp>
 #include <amgcl/coarsening/runtime.hpp>
 #include <amgcl/relaxation/runtime.hpp>
 #include <amgcl/relaxation/as_preconditioner.hpp>
@@ -267,7 +267,7 @@ int main(int argc, char *argv[]) {
         typedef
             amgcl::mpi::subdomain_deflation<
                 amgcl::relaxation::as_preconditioner<Backend, amgcl::runtime::relaxation::wrapper >,
-                amgcl::runtime::solver::wrapper,
+                amgcl::runtime::mpi::solver::wrapper<Backend>,
                 amgcl::runtime::mpi::direct::solver<double>
             > SDD;
 
@@ -285,7 +285,7 @@ int main(int argc, char *argv[]) {
         typedef
             amgcl::mpi::subdomain_deflation<
                 amgcl::amg<Backend, amgcl::runtime::coarsening::wrapper, amgcl::runtime::relaxation::wrapper>,
-                amgcl::runtime::solver::wrapper,
+                amgcl::runtime::mpi::solver::wrapper<Backend>,
                 amgcl::runtime::mpi::direct::solver<double>
             > SDD;
 

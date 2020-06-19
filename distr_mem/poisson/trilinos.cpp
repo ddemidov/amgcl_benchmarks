@@ -1,4 +1,5 @@
 #include <iostream>
+#include <numeric>
 
 #include <Epetra_ConfigDefs.h>
 #ifdef HAVE_MPI

@@ -35,7 +35,7 @@
 #include <amgcl/mpi/partition/runtime.hpp>
 #include <amgcl/mpi/amg.hpp>
 #include <amgcl/mpi/make_solver.hpp>
-#include <amgcl/solver/runtime.hpp>
+#include <amgcl/mpi/solver/runtime.hpp>
 #include <amgcl/profiler.hpp>
 
 #include "argh.h"
@@ -211,7 +211,7 @@ int main(int argc, char *argv[]) {
                     amgcl::runtime::mpi::direct::solver<double>,
                     amgcl::runtime::mpi::partition::wrapper<Backend>
                     >,
-                amgcl::runtime::solver::wrapper
+                amgcl::runtime::mpi::solver::wrapper<Backend>
                 >
             Solver;
 

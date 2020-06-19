@@ -33,7 +33,6 @@
 #include <amgcl/io/binary.hpp>
 #include <amgcl/io/mm.hpp>
 #include <amgcl/adapter/crs_tuple.hpp>
-#include <amgcl/solver/runtime.hpp>
 #include <amgcl/relaxation/as_preconditioner.hpp>
 #include <amgcl/profiler.hpp>
 
@@ -46,6 +45,7 @@
 #include <amgcl/mpi/relaxation/runtime.hpp>
 #include <amgcl/mpi/partition/runtime.hpp>
 #include <amgcl/mpi/direct_solver/runtime.hpp>
+#include <amgcl/mpi/solver/runtime.hpp>
 
 #include "argh.h"
 
@@ -235,7 +235,7 @@ int main(int argc, char *argv[]) {
                     amgcl::mpi::block_preconditioner<
                         amgcl::relaxation::as_preconditioner<Backend, amgcl::runtime::relaxation::wrapper>
                         >,
-                    amgcl::runtime::solver::wrapper
+                    amgcl::runtime::mpi::solver::wrapper<Backend>
                     >,
                 amgcl::mpi::make_solver<
                     amgcl::mpi::amg<
@@ -245,10 +245,10 @@ int main(int argc, char *argv[]) {
                         amgcl::runtime::mpi::direct::solver<double>,
                         amgcl::runtime::mpi::partition::wrapper<Backend>
                         >,
-                    amgcl::runtime::solver::wrapper
+                        amgcl::runtime::mpi::solver::wrapper<Backend>
                     >
                 >,
-            amgcl::runtime::solver::wrapper
+                amgcl::runtime::mpi::solver::wrapper<Backend>
             > Solver;
 
     Solver solve(world, std::tie(chunk, ptr, col, val), prm, bprm);
